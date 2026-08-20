@@ -11,7 +11,7 @@ An open-source Python (asyncio) framework that synthesizes the strongest ideas o
 ![Deps](https://img.shields.io/badge/core%20dependencies-0-a78bfa)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-**[▶ Live architecture demo](https://raphsoundmix-ctrl.github.io/AI_Voice_Agent_Demo/)** — an interactive diagram of the three operating modes, a scripted runtime session with a barge-in event, and the full audio processing chain. The site is a static, dependency-free page (`docs/`); a ready-to-import `vercel.json` is included for one-click Vercel hosting as well.
+**[▶ Live architecture demo](https://ai-voice-agent-demo-rose.vercel.app/)** — an interactive diagram of the three operating modes, a scripted runtime session with a barge-in event, the full audio processing chain, and the local-first vision. Hosted on Vercel with continuous deployment from this repository ([GitHub Pages mirror](https://raphsoundmix-ctrl.github.io/AI_Voice_Agent_Demo/)).
 
 ---
 
