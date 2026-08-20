@@ -15,6 +15,15 @@ An open-source Python (asyncio) framework that synthesizes the strongest ideas o
 
 ---
 
+> ### A note from the author
+> This is my **working prototype** — active development continues. I build audio for a living (sound mixing is my profession), and VoiceRT reflects how I believe a voice agent should be engineered: **audio-first, latency-honest, and interruptible like a real conversation partner**.
+>
+> The three profiles are not three products — they are three configurations of **one universal core**. Swap the system prompt, the tool registry, and the latency budget, and the same agent adapts to practically any domain: sales floors, live events and conferences, support desks, in-game characters, field operations.
+>
+> — *Raph, sound mixing engineer · voice-AI builder*
+
+---
+
 ## Why another framework?
 
 Three mature systems each solve a different part of the problem — and none of them solves ours:

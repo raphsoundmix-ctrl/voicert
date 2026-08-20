@@ -44,9 +44,9 @@
         spirit of Rapida — with three strict operating profiles on top.
       </p>
       <div class="chips">
-        <span class="chip"><b>50&nbsp;ms</b> TTFB on stub providers</span>
-        <span class="chip"><b>&lt;300&nbsp;ms</b> NPC latency budget</span>
-        <span class="chip"><b>28/28</b> tests · mypy strict</span>
+        <span class="chip"><b data-count="50" data-suffix="&nbsp;ms">50&nbsp;ms</b> TTFB on stub providers</span>
+        <span class="chip"><b data-count="300" data-prefix="&lt;" data-suffix="&nbsp;ms">&lt;300&nbsp;ms</b> NPC latency budget</span>
+        <span class="chip"><b data-count="28" data-suffix="/28">28/28</b> tests · mypy strict</span>
         <span class="chip"><b>0</b> core dependencies</span>
       </div>
       <div class="cta">
@@ -242,7 +242,7 @@
           <li>barge-in: 250 ms gate — back-channel (“uh-huh”) never kills the pitch</li>
           <li>interrupted reply: kept in context, annotated — an interruption is an objection signal</li>
         </ul>
-        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:100%"></i></div><b>1000 ms</b></div>
+        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:100%"></i></div><b data-count="1000" data-suffix=" ms">1000 ms</b></div>
       </article>
 
       <article class="card app assistant">
@@ -255,7 +255,7 @@
           <li>barge-in: 120 ms gate</li>
           <li>irreversible actions require explicit spoken confirmation</li>
         </ul>
-        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:80%"></i></div><b>800 ms</b></div>
+        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:80%"></i></div><b data-count="800" data-suffix=" ms">800 ms</b></div>
       </article>
 
       <article class="card app npc">
@@ -269,8 +269,31 @@
           <li>barge-in: instant (0 ms) — game feel first</li>
           <li>interrupted reply is dropped from context: cleaner lore, shorter prompt</li>
         </ul>
-        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:30%"></i></div><b>300 ms</b></div>
+        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:30%"></i></div><b data-count="300" data-suffix=" ms">300 ms</b></div>
       </article>
+    </div>
+  </section>
+
+  <!-- ============ AUTHOR'S NOTE ============ -->
+  <section id="author" class="section">
+    <div class="author-note">
+      <div class="author-kicker mono">A NOTE FROM THE AUTHOR</div>
+      <p class="author-lead">
+        This is my working prototype — active development continues. I build audio for a living:
+        sound mixing is my profession, and VoiceRT reflects how I believe a voice agent should be
+        engineered — <b>audio-first, latency-honest, and interruptible like a real conversation partner</b>.
+      </p>
+      <p class="author-body">
+        The three profiles you see here are not three products. They are three configurations of one
+        universal core. The same pipeline that closes a sales call can run a conference assistant or
+        hold a character inside a game world — swap the system prompt, the tool registry, and the
+        latency budget, and the agent adapts to <b>practically any domain</b>: sales floors, live events,
+        support desks, games, field operations.
+      </p>
+      <div class="author-sign">
+        <span class="author-name">Raph</span>
+        <span class="author-role mono">sound mixing engineer · voice-AI builder</span>
+      </div>
     </div>
   </section>
 

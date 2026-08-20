@@ -245,3 +245,80 @@ if (canvas) {
     resizeTimer = setTimeout(drawWave, 200);
   });
 }
+
+/* ============ SmoothUI-inspired patterns (vanilla ports) ============ */
+
+/* Scroll Reveal: sections, cards, and chain modules rise into view. */
+(function initReveals() {
+  const targets = document.querySelectorAll(
+    ".section h2, .section .lead, .card, .chain, .diagram-wrap, .sim, .author-note"
+  );
+  targets.forEach((el, i) => {
+    el.classList.add("reveal");
+    el.style.setProperty("--stagger", String(i % 3));
+  });
+  if (reducedMotion || !("IntersectionObserver" in window)) {
+    targets.forEach((el) => el.classList.add("in"));
+    return;
+  }
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in");
+          io.unobserve(entry.target);
+        }
+      }
+    },
+    { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+  );
+  targets.forEach((el) => io.observe(el));
+})();
+
+/* Number Flow: metric values count up once when they enter the viewport. */
+(function initCounters() {
+  const counters = document.querySelectorAll("[data-count]");
+  if (!counters.length) return;
+
+  function animate(el) {
+    const target = parseInt(el.dataset.count, 10);
+    const prefix = el.dataset.prefix || "";
+    const suffix = el.dataset.suffix || "";
+    const render = (v) => { el.innerHTML = prefix + v + suffix; };
+    if (reducedMotion) { render(target); return; }
+    const dur = 700;
+    const t0 = performance.now();
+    (function tick(now) {
+      const p = Math.min((now - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic, NumberFlow-style
+      render(Math.round(target * eased));
+      if (p < 1) requestAnimationFrame(tick);
+    })(t0);
+  }
+
+  if (!("IntersectionObserver" in window)) { counters.forEach(animate); return; }
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          animate(entry.target);
+          io.unobserve(entry.target);
+        }
+      }
+    },
+    { threshold: 0.6 }
+  );
+  counters.forEach((el) => io.observe(el));
+})();
+
+/* Glow Hover Cards: the border glow follows the pointer. */
+(function initGlowCards() {
+  if (reducedMotion) return;
+  document.querySelectorAll(".card").forEach((card) => {
+    card.addEventListener("pointermove", (e) => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      card.style.setProperty("--my", `${e.clientY - r.top}px`);
+    });
+  });
+})();
