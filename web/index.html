@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceRT — Realtime Voice Agent Framework</title>
+<meta name="description" content="An open-source framework for real-time voice AI agents: frame pipeline, millisecond barge-in handling, and three strict operating profiles — Sales, Assistant, NPC.">
+<meta property="og:title" content="VoiceRT — Realtime Voice Agent Framework">
+<meta property="og:description" content="Python asyncio · WebRTC/SIP · local VAD · barge-in · Sales / Assistant / NPC profiles">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="#top">Voice<span>RT</span></a>
+    <nav>
+      <a href="#arch">Architecture</a>
+      <a href="#live">Runtime</a>
+      <a href="#sound">Audio Chain</a>
+      <a href="#models">Models</a>
+      <a href="#apps">Use Cases</a>
+      <a class="gh" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <canvas id="wave" aria-hidden="true"></canvas>
+    <div class="hero-inner">
+      <p class="kicker">open source · python asyncio · zero-dependency core</p>
+      <h1>A realtime voice agent<br>you can <em>interrupt</em></h1>
+      <p class="sub">
+        A production-grade blueprint for voice AI: a frame pipeline in the spirit of Pipecat,
+        transport &amp; VAD handling in the spirit of LiveKit Agents, state orchestration in the
+        spirit of Rapida — with three strict operating profiles on top.
+      </p>
+      <div class="chips">
+        <span class="chip"><b>50&nbsp;ms</b> TTFB on stub providers</span>
+        <span class="chip"><b>&lt;300&nbsp;ms</b> NPC latency budget</span>
+        <span class="chip"><b>28/28</b> tests · mypy strict</span>
+        <span class="chip"><b>0</b> core dependencies</span>
+      </div>
+      <div class="cta">
+        <a class="btn primary" href="#arch">Explore the architecture</a>
+        <a class="btn" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" target="_blank" rel="noopener">Source on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section id="arch" class="section">
+    <h2>Voice Agent Architecture</h2>
+    <p class="lead">One pipeline — three operating modes. Switch the profile and watch the active data path change.</p>
+
+    <div class="mode-switch" role="group" aria-label="Agent mode selector">
+      <span class="mode-label" id="mode-switch-label">Agent mode</span>
+      <button class="mode-arrow" id="mode-prev" aria-label="Previous mode">‹</button>
+      <div class="mode-name mono" id="mode-name" role="status" aria-live="polite">Assistant</div>
+      <button class="mode-arrow" id="mode-next" aria-label="Next mode">›</button>
+    </div>
+
+    <div class="diagram-wrap">
+      <svg id="diagram" viewBox="0 0 860 560" role="img" aria-label="Voice agent architecture diagram: transport, VAD, STT, context and state, LLM, then TTS, CRM, or game engine depending on the active mode">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#3d4657"/>
+          </marker>
+          <marker id="arr-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <!-- edges -->
+        <path class="edge" id="e-t-vad"  d="M430,86 V120"/>
+        <path class="edge" id="e-vad-stt" d="M430,166 V200"/>
+        <path class="edge" id="e-stt-ctx" d="M430,246 V280"/>
+        <path class="edge" id="e-ctx-llm" d="M400,326 C380,350 355,356 335,368"/>
+        <path class="edge dashed" id="e-ctx-mem" d="M470,326 C500,350 540,356 565,368"/>
+        <path class="edge" id="e-llm-tts" d="M255,414 C220,440 190,446 168,458"/>
+        <path class="edge dashed" id="e-llm-crm" d="M310,414 V458"/>
+        <path class="edge dashed" id="e-llm-game" d="M370,414 C430,442 480,448 520,458"/>
+        <path class="edge dashed" id="e-mem-game" d="M610,414 C600,432 590,442 580,458"/>
+
+        <!-- barge-in feedback loop -->
+        <path class="edge barge" id="e-barge" d="M112,458 C60,380 60,220 150,143 C220,84 330,120 384,140" marker-end="url(#arr-hot)"/>
+        <text class="barge-label mono" x="34" y="300" transform="rotate(-90 34 300)">barge-in · InterruptionFrame</text>
+
+        <!-- nodes -->
+        <g class="node" id="n-transport"><rect x="330" y="40" width="200" height="46" rx="6"/><text x="430" y="68">Transport (SIP/WebRTC)</text></g>
+        <g class="node" id="n-vad"><rect x="330" y="120" width="200" height="46" rx="6"/><text x="430" y="148">VAD (Voice Detection)</text></g>
+        <g class="node" id="n-stt"><rect x="340" y="200" width="180" height="46" rx="6"/><text x="430" y="228">STT (Speech to Text)</text></g>
+        <g class="node" id="n-ctx"><rect x="325" y="280" width="210" height="46" rx="6"/><text x="430" y="308">Context &amp; State</text></g>
+        <g class="node" id="n-llm"><rect x="205" y="368" width="230" height="46" rx="6"/><text x="320" y="396">LLM (Reasoning &amp; Tools)</text></g>
+        <g class="node" id="n-mem"><rect x="510" y="368" width="215" height="46" rx="6"/><text x="617" y="396">Memory &amp; IoT (Assistant)</text></g>
+        <g class="node" id="n-tts"><rect x="55" y="458" width="165" height="46" rx="6"/><text x="137" y="486">TTS (Text to Speech)</text></g>
+        <g class="node" id="n-crm"><rect x="243" y="458" width="150" height="46" rx="6"/><text x="318" y="486">CRM &amp; SIP (Sales)</text></g>
+        <g class="node" id="n-game"><rect x="428" y="458" width="280" height="46" rx="6"/><text x="568" y="486">Game Engine &amp; Guardrails (NPC)</text></g>
+      </svg>
+
+      <div class="active-pipeline">
+        <span class="ap-label mono">ACTIVE PIPELINE</span>
+        <span class="ap-name" id="ap-name">Jarvis Engine</span>
+      </div>
+    </div>
+
+    <div class="mode-details" id="mode-details" aria-live="polite">
+      <!-- filled by app.js -->
+    </div>
+  </section>
+
+  <!-- ============ RUNTIME WALKTHROUGH (live sim) ============ -->
+  <section id="live" class="section alt">
+    <h2>How it works in real time</h2>
+    <p class="lead">
+      A scripted simulation of the actual runtime loop — the same stages and the same metrics that
+      <span class="mono">voicert.metrics</span> emits in structured logs. Including the part that matters most: barge-in.
+    </p>
+    <div class="sim">
+      <div class="sim-head">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="sim-title mono">voicert · session — profile <span id="sim-profile">assistant</span></span>
+        <button class="btn small" id="sim-play">▶ Run session</button>
+      </div>
+      <pre class="sim-body mono" id="sim-body" aria-live="polite">press “Run session”…</pre>
+    </div>
+    <div class="grid3 explain">
+      <div class="card">
+        <h3>1 · Frames, not callbacks</h3>
+        <p>Everything that moves through the system is an immutable frame: <span class="mono">AudioFrame</span>,
+        <span class="mono">TextFrame</span>, <span class="mono">FunctionCallFrame</span>,
+        <span class="mono">InterruptionFrame</span>. Processors (STT → LLM → TTS) communicate exclusively
+        through frames, so swapping a provider never touches the core.</p>
+      </div>
+      <div class="card">
+        <h3>2 · Barge-in as physics, not a feature</h3>
+        <p>The local VAD detects speech → in-flight <span class="mono">asyncio</span> generation tasks are cancelled →
+        queues are drained → the transport flushes playback. And the dialogue history keeps only the
+        <b>actually spoken</b> prefix of the reply — the agent never “remembers” words the user never heard.</p>
+      </div>
+      <div class="card">
+        <h3>3 · A profile is a contract</h3>
+        <p>Sales, Assistant, and NPC differ structurally: tool registries are physically isolated
+        (an NPC cannot invoke the CRM even under prompt injection), and each profile carries its own
+        latency budget, VAD sensitivity, and context policy.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AUDIO CHAIN ============ -->
+  <section id="sound" class="section">
+    <h2>Audio processing chain</h2>
+    <p class="lead">
+      Designed like a studio signal chain — because a voice agent is first and foremost audio.
+      A clean input means fewer STT errors, fewer wasted tokens, lower latency, and lower cost.
+    </p>
+
+    <div class="chain">
+      <div class="chain-title"><span class="io in">IN</span> Input chain · microphone/line → STT</div>
+      <div class="chain-strip">
+        <div class="fx"><b>HPF 80–120 Hz</b><span>cuts rumble, hum,<br>and proximity effect</span></div>
+        <div class="fx"><b>Denoise</b><span>RNNoise / Silero:<br>room noise, HVAC</span></div>
+        <div class="fx"><b>AGC</b><span>−18 dBFS target,<br>stable level into VAD</span></div>
+        <div class="fx"><b>Soft Limiter</b><span>−3 dBFS ceiling,<br>no clipping into the codec</span></div>
+        <div class="fx"><b>Resample</b><span>16 kHz mono PCM —<br>the native STT format</span></div>
+        <div class="fx hot"><b>VAD</b><span>Silero, on-device, &lt;1 ms —<br>barge-in starts here</span></div>
+      </div>
+    </div>
+
+    <div class="chain">
+      <div class="chain-title"><span class="io out">OUT</span> Output chain · TTS → listener</div>
+      <div class="chain-strip">
+        <div class="fx"><b>TTS 24–48 kHz</b><span>chunked streaming,<br>first byte ≈ 75–90 ms</span></div>
+        <div class="fx"><b>De-esser</b><span>synthesis hisses on sibilants —<br>soft compression at 5–8 kHz</span></div>
+        <div class="fx"><b>Presence EQ</b><span>+1.5 dB @ 3–5 kHz:<br>intelligibility in noise</span></div>
+        <div class="fx"><b>Loudness</b><span>−16 LUFS (WebRTC) ·<br>−22 dBFS (telephony)</span></div>
+        <div class="fx"><b>Codec</b><span>Opus 48k (WebRTC) ·<br>μ-law 8k (SIP/Twilio)</span></div>
+        <div class="fx hot"><b>Flush</b><span>barge-in instantly clears<br>the jitter buffer</span></div>
+      </div>
+    </div>
+
+    <p class="note">
+      This chain is specified by the author as a sound mixing engineer: the thresholds and level
+      targets are practical values for real rooms and real phone lines, not documentation defaults.
+    </p>
+  </section>
+
+  <!-- ============ MODELS ============ -->
+  <section id="models" class="section alt">
+    <h2>Models: plugged in later, interfaces ready now</h2>
+    <p class="lead">
+      The core is vendor-agnostic. Every provider is a ~50-line adapter against a stable interface
+      (<span class="mono">STTService / LLMService / TTSService</span>). Today the pipeline runs on
+      deterministic stubs — the tests and the demo require no API keys at all.
+    </p>
+    <div class="grid3">
+      <div class="card model">
+        <div class="model-tag stt">STT · speech to text</div>
+        <ul>
+          <li><b>Deepgram Nova-3</b> — websocket streaming, ~150 ms interim results <em>primary</em></li>
+          <li><b>faster-whisper</b> — local GPU inference, offline fallback, no key required</li>
+        </ul>
+      </div>
+      <div class="card model">
+        <div class="model-tag llm">LLM · reasoning &amp; tools</div>
+        <ul>
+          <li><b>Claude Haiku</b> — NPC: speed wins <em>primary for NPC</em></li>
+          <li><b>Claude Sonnet</b> — Sales/Assistant: reasoning quality</li>
+          <li><b>OpenRouter</b> — any model behind one key, for experimentation</li>
+        </ul>
+      </div>
+      <div class="card model">
+        <div class="model-tag tts">TTS · text to speech</div>
+        <ul>
+          <li><b>ElevenLabs Flash v2.5</b> — ≈75 ms TTFB <em>primary for NPC</em></li>
+          <li><b>Cartesia Sonic</b> — stable prosody over long sessions</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">Model-to-profile routing lives in the <span class="mono">ConfigFactory</span>: NPC gets the fastest models, Sales gets the most accurate ones.</p>
+  </section>
+
+  <!-- ============ USE CASES ============ -->
+  <section id="apps" class="section">
+    <h2>Where it applies</h2>
+    <div class="grid3">
+      <article class="card app sales">
+        <div class="app-head"><span class="app-emoji">📞</span><h3>Sales Agent</h3></div>
+        <p>Inbound and outbound calls over SIP/Twilio. A scripted conversation graph, lead qualification,
+        objection handling logged to the CRM, and deal context maintained across the entire call.</p>
+        <ul class="facts mono">
+          <li>transport: SIP / Twilio Media Streams</li>
+          <li>tools: crm_lookup · crm_update_deal · crm_log_objection · schedule_callback · transfer_to_human</li>
+          <li>barge-in: 250 ms gate — back-channel (“uh-huh”) never kills the pitch</li>
+          <li>interrupted reply: kept in context, annotated — an interruption is an objection signal</li>
+        </ul>
+        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:100%"></i></div><b>1000 ms</b></div>
+      </article>
+
+      <article class="card app assistant">
+        <div class="app-head"><span class="app-emoji">🎧</span><h3>Personal Assistant</h3></div>
+        <p>Jarvis-style: conferences, meetings, everyday tasks. Long-term memory about its principal,
+        web search, calendar, IoT, and application control — by voice, over WebRTC, from any device.</p>
+        <ul class="facts mono">
+          <li>transport: WebRTC (Opus 48k)</li>
+          <li>tools: web_search · calendar_create · memory_store/recall · iot_command · os_open_app</li>
+          <li>barge-in: 120 ms gate</li>
+          <li>irreversible actions require explicit spoken confirmation</li>
+        </ul>
+        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:80%"></i></div><b>800 ms</b></div>
+      </article>
+
+      <article class="card app npc">
+        <div class="app-head"><span class="app-emoji">🎮</span><h3>In-Game NPC</h3></div>
+        <p>A character that lives strictly within the game's lore. The guardrails are structural: the NPC
+        physically has no tools outside the game engine. It reacts to in-game events over WebSocket/gRPC,
+        with gestures synchronized to speech.</p>
+        <ul class="facts mono">
+          <li>transport: WebRTC + WebSocket/gRPC to the engine</li>
+          <li>tools: emit_game_event · query_world_state · play_animation — nothing else</li>
+          <li>barge-in: instant (0 ms) — game feel first</li>
+          <li>interrupted reply is dropped from context: cleaner lore, shorter prompt</li>
+        </ul>
+        <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:30%"></i></div><b>300 ms</b></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <div class="foot-inner">
+      <div>
+        <b>VoiceRT</b> · Python 3.11+ asyncio · zero-dependency core ·
+        <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" target="_blank" rel="noopener">source code ↗</a>
+      </div>
+      <div class="mono dim">frame pipeline © Pipecat idea · barge-in © LiveKit approach · orchestration © Rapida pattern — implementation original, MIT</div>
+    </div>
+  </footer>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
