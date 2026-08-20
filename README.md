@@ -16,11 +16,35 @@ An open-source Python (asyncio) framework that synthesizes the strongest ideas o
 ---
 
 > ### A note from the author
-> This is my **working prototype** — active development continues. I build audio for a living (sound mixing is my profession), and VoiceRT reflects how I believe a voice agent should be engineered: **audio-first, latency-honest, and interruptible like a real conversation partner**.
+> This is my **working prototype** — active development continues. I have spent **more than a decade working professionally with sound and voice**, and VoiceRT is built on that experience: I know which processing belongs at every point of the audio chain, where automation pays off, and how this has to behave on a server.
 >
-> The three profiles are not three products — they are three configurations of **one universal core**. Swap the system prompt, the tool registry, and the latency budget, and the same agent adapts to practically any domain: sales floors, live events and conferences, support desks, in-game characters, field operations.
+> I see it as **one universal agent configurable for practically any domain**: built to run locally, to speak multiple languages, and to expose the most convenient integration surface I could design — a stable frame contract and ~50-line adapters — with a fully local knowledge base as the next milestone. The three profiles are not three products; they are three configurations of one core.
 >
-> — *Raph, sound mixing engineer · voice-AI builder*
+> In games it connects to audio middleware such as **Wwise or FMOD**: the engine routes the player's voice to the NPC, and the NPC talks back inside the game world — no dialogue scripts. The strongest application is a **personal assistant for a business owner**, where the whole database, the reasoning, and the speech synthesis eventually live on the mobile device and run without internet. With a database, prepared prompts, and a voice — that is an engineering roadmap, not a wish.
+>
+> — *Raph, 10+ years in sound & voice · voice-AI builder*
+
+---
+
+## Vision: one core, any domain — and why it will hold
+
+Every claim here is backed by the architecture in this repository: the pipeline is provider-agnostic **by construction**, so any cloud stage swaps for an on-device counterpart through the same ~50-line adapter contract.
+
+**🎮 Wwise / FMOD NPC bridge.** Game audio middleware becomes the transport: Wwise or FMOD routes the player's voice bus into VoiceRT, and the NPC answers through the game's own audio bus — in character, inside the lore, with no dialogue trees. The NPC profile's engine link is already event-driven (WebSocket/gRPC), and its 0 ms barge-in gate means the player can talk over the NPC and it reacts like a person.
+
+**🌍 Multilingual by design.** A language is a configuration, not a rewrite: the profile carries the prompt and the voice; Whisper covers 99 languages locally; ElevenLabs and Cartesia ship multilingual voices behind one API; and VAD/barge-in are language-independent — they hear energy and speech, not words.
+
+**📱 Fully local, fully private.** The endgame is a business owner's assistant whose entire knowledge base lives on the phone, with reasoning and speech synthesis on-device, offline. Every stage already has a proven local counterpart:
+
+| Pipeline stage | Cloud (today's plan) | On-device counterpart (endgame) |
+|---|---|---|
+| VAD | — (always local) | Silero VAD — already local in this design |
+| STT | Deepgram Nova-3 | faster-whisper on GPU/NPU |
+| LLM | Claude Haiku / Sonnet | llama.cpp-class on-device models |
+| TTS | ElevenLabs / Cartesia | Piper / Kokoro |
+| Memory / KB | any vector DB | sqlite-vec — a vector database in a single file |
+
+The proof is structural: the demo runs stub providers through the exact same interfaces a local or cloud model would use. If the stubs pass 28 tests through those seams — the swap is an adapter, not a rebuild.
 
 ---
 

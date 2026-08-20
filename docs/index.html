@@ -25,6 +25,7 @@
       <a href="#sound">Audio Chain</a>
       <a href="#models">Models</a>
       <a href="#apps">Use Cases</a>
+      <a href="#vision">Vision</a>
       <a class="gh" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" target="_blank" rel="noopener">GitHub ↗</a>
     </nav>
   </div>
@@ -274,25 +275,86 @@
     </div>
   </section>
 
+  <!-- ============ VISION ============ -->
+  <section id="vision" class="section alt">
+    <h2>Where this is going — and why it will work</h2>
+    <p class="lead">
+      Every claim below is backed by the architecture in this repository. The pipeline is
+      provider-agnostic <b>by construction</b>: any cloud stage swaps for an on-device counterpart
+      through the same ~50-line adapter contract, and the core itself has zero dependencies to
+      get in the way.
+    </p>
+    <div class="grid3">
+      <article class="card app npc">
+        <div class="app-head"><span class="app-emoji">🎮</span><h3>Wwise / FMOD NPC bridge</h3></div>
+        <p>Game audio middleware becomes the transport: <b>Wwise or FMOD routes the player's voice bus
+        to VoiceRT, and the NPC answers through the game's own audio bus</b> — in character, inside the
+        lore, with no dialogue trees and no scripted lines.</p>
+        <ul class="facts mono">
+          <li>engine link is already event-driven (WebSocket/gRPC) in the NPC profile</li>
+          <li>middleware handles mixing/spatialization — VoiceRT handles listening, thinking, speaking</li>
+          <li>0 ms barge-in gate: the player talks over the NPC and it reacts like a person</li>
+        </ul>
+      </article>
+      <article class="card app assistant">
+        <div class="app-head"><span class="app-emoji">🌍</span><h3>Multilingual by design</h3></div>
+        <p>A language is a <b>configuration, not a rewrite</b>: the profile carries the prompt and the
+        voice, and every planned provider is natively multilingual.</p>
+        <ul class="facts mono">
+          <li>Whisper: 99 languages, runs locally</li>
+          <li>ElevenLabs / Cartesia: multilingual voices, one API</li>
+          <li>VAD and barge-in are language-independent — they hear energy and speech, not words</li>
+          <li>context policies and the tool firewall are locale-agnostic by design</li>
+        </ul>
+      </article>
+      <article class="card app sales">
+        <div class="app-head"><span class="app-emoji">📱</span><h3>Fully local, fully private</h3></div>
+        <p>The endgame: a business owner's assistant where <b>the entire knowledge base lives on the
+        phone, and reasoning plus speech synthesis run on-device, offline</b>. Feasible today — every
+        pipeline stage has a proven local counterpart.</p>
+        <ul class="facts mono">
+          <li>VAD: Silero — already designed local in this repo</li>
+          <li>STT: faster-whisper on GPU/NPU</li>
+          <li>LLM: llama.cpp-class on-device models</li>
+          <li>TTS: Piper / Kokoro on-device voices</li>
+          <li>memory: sqlite-vec — a vector database in a file</li>
+        </ul>
+      </article>
+    </div>
+    <p class="note">
+      The proof is structural: the demo you just ran uses stub providers through the exact same
+      interfaces a local or cloud model would use. If the stubs work — and 28 tests say they do —
+      the swap is an adapter, not a rebuild.
+    </p>
+  </section>
+
   <!-- ============ AUTHOR'S NOTE ============ -->
   <section id="author" class="section">
     <div class="author-note">
       <div class="author-kicker mono">A NOTE FROM THE AUTHOR</div>
       <p class="author-lead">
-        This is my working prototype — active development continues. I build audio for a living:
-        sound mixing is my profession, and VoiceRT reflects how I believe a voice agent should be
-        engineered — <b>audio-first, latency-honest, and interruptible like a real conversation partner</b>.
+        This is my working prototype — active development continues. I have spent <b>more than a
+        decade working professionally with sound and voice</b>, and VoiceRT is built on that
+        experience: I know which processing belongs at every point of the chain, where automation
+        pays off, and how this has to behave on a server.
       </p>
       <p class="author-body">
-        The three profiles you see here are not three products. They are three configurations of one
-        universal core. The same pipeline that closes a sales call can run a conference assistant or
-        hold a character inside a game world — swap the system prompt, the tool registry, and the
-        latency budget, and the agent adapts to <b>practically any domain</b>: sales floors, live events,
-        support desks, games, field operations.
+        I see it as <b>one universal agent configurable for practically any domain</b>: it is built to
+        run locally, to speak multiple languages, and to expose the most convenient integration
+        surface I could design — a stable frame contract and ~50-line adapters — with a fully local
+        knowledge base as the next milestone.
+      </p>
+      <p class="author-body">
+        In games it connects to audio middleware such as <b>Wwise or FMOD</b>: the engine routes the
+        player's voice to the NPC, and the NPC talks back inside the game world — no dialogue
+        scripts. And the strongest application is a <b>personal assistant for a business owner</b>,
+        where the whole database, the reasoning, and the speech synthesis eventually live on the
+        mobile device and work without internet. With a database, prepared prompts, and a voice —
+        that is an engineering roadmap, not a wish.
       </p>
       <div class="author-sign">
         <span class="author-name">Raph</span>
-        <span class="author-role mono">sound mixing engineer · voice-AI builder</span>
+        <span class="author-role mono">10+ years in sound &amp; voice · voice-AI builder</span>
       </div>
     </div>
   </section>
