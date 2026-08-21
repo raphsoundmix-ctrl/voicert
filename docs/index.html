@@ -25,6 +25,7 @@
       <a href="#sound">Audio Chain</a>
       <a href="#models">Models</a>
       <a href="#apps">Use Cases</a>
+      <a href="#games">For Game Devs</a>
       <a href="#vision">Vision</a>
       <a class="gh" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" target="_blank" rel="noopener">GitHub ↗</a>
     </nav>
@@ -272,6 +273,201 @@
         </ul>
         <div class="budget"><span>TTFB budget</span><div class="bar"><i style="--w:30%"></i></div><b data-count="300" data-suffix=" ms">300 ms</b></div>
       </article>
+    </div>
+  </section>
+
+  <!-- ============ GAME DEVELOPERS ============ -->
+  <section id="games" class="section">
+    <h2>Voicing an open world — the indie economics</h2>
+    <p class="lead">
+      Developers ask two questions before the interesting ones: <b>what does it cost to run, and does
+      it pay for itself?</b> Here are both answers, with sourced numbers — and the
+      <span class="mono">voicert.game</span> module that implements them.
+    </p>
+
+    <div class="stat-row">
+      <div class="stat">
+        <b data-count="1135" data-prefix="$">$1,135</b>
+        <span>SAG-AFTRA minimum per 4-hour session, up to 3 voices (IMA 2025–26). Before studio,
+        direction, editing — and again after every rewrite.</span>
+      </div>
+      <div class="stat">
+        <b data-count="250" data-suffix="k+">250k+</b>
+        <span>lines of dialogue announced for Starfield (Bethesda pre-release count).
+        Skyrim ~60k, Fallout 4 111k. No indie buys that.</span>
+      </div>
+      <div class="stat accent">
+        <b>$0</b>
+        <span>marginal cost of a line synthesized on the player's device. It does not scale
+        with units sold. That is the whole unlock.</span>
+      </div>
+    </div>
+
+    <h3 class="sub-head">Dialogue LOD — cost scales with what the player can <em>hear</em></h3>
+    <p class="lead narrow">
+      Nobody renders every blade of grass at full resolution. Dialogue gets the same treatment:
+      only the NPC you are actually talking to runs the full pipeline.
+    </p>
+    <div class="lod-ladder">
+      <div class="lod live">
+        <div class="lod-head"><span class="lod-name mono">LIVE</span><span class="lod-cost">one pool slot</span></div>
+        <p>Full pipeline: STT → LLM → TTS, streamed. The NPC in front of you.</p>
+      </div>
+      <div class="lod bark">
+        <div class="lod-head"><span class="lod-name mono">BARK</span><span class="lod-cost">~0 · asset playback</span></div>
+        <p>The LLM <b>selects</b> a pre-baked line instead of synthesizing one. Audible, in character, free.</p>
+      </div>
+      <div class="lod crowd">
+        <div class="lod-head"><span class="lod-name mono">CROWD</span><span class="lod-cost">~0 · one shared bed</span></div>
+        <p>Ambient murmur. No per-NPC agent exists at all.</p>
+      </div>
+      <div class="lod off">
+        <div class="lod-head"><span class="lod-name mono">OFF</span><span class="lod-cost">0</span></div>
+        <p>Out of earshot. Nothing runs, NPC state frozen.</p>
+      </div>
+    </div>
+
+    <div class="sim compact">
+      <div class="sim-head">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="sim-title mono">python examples/game_open_world.py — 240 NPCs, market square</span>
+      </div>
+      <pre class="sim-body mono short"><span class="t-sys">DIALOGUE LOD    (240 NPCs in the square)</span>
+<span class="t-agent">  LIVE      2 NPC   full STT+LLM+TTS, one pool slot each</span>
+<span class="t-sys">  BARK      4 NPC   LLM picks a pre-baked line — no synthesis
+  CROWD    53 NPC   one shared murmur bed
+  OFF     181 NPC   nothing runs</span>
+
+<span class="t-sys">PLAYER WALKS 40 m ACROSS THE SQUARE</span>
+<span class="t-sys">  step 1: live=  2  bark= 13  crowd= 63  off=162  | agents held: 2
+  step 3: live= 15  bark= 36  crowd= 68  off=121  | agents held: 7</span>
+<span class="t-metric">  step 4: live= 32  bark= 43  crowd= 68  off= 97  | agents held: 7  ← capped</span>
+</pre>
+    </div>
+    <p class="note">
+      Live agents are a bounded, priority-evicted pool — the same discipline Wwise and FMOD already
+      apply to voices. A quest-giver outranks an ambient vendor; anyone evicted degrades to the bark
+      tier rather than falling silent. 240 NPCs in the world, never more than 7 agents in memory.
+    </p>
+
+    <h3 class="sub-head">It never touches the frame budget</h3>
+    <div class="grid3">
+      <div class="card">
+        <h3>16.6 ms is untouchable</h3>
+        <p>Synthesis runs off the render thread, so the constraint is <b>a fraction of one CPU core</b>,
+        not frame time. Measured on a <b>Raspberry Pi 4</b>, Piper voices hit RTF 0.77–0.81 on one
+        thread and 0.35 on four. If a Pi synthesizes faster than real time, a gaming PC is not the
+        bottleneck. Supertonic reports RTF 0.012–0.015 on an M4 Pro CPU.</p>
+      </div>
+      <div class="card">
+        <h3>Pool size is derived, not guessed</h3>
+        <p>Give the budget a real-time factor and a CPU allowance, and it returns the number of
+        concurrent voices you can afford — measured on your <b>minimum spec</b>, not your workstation.</p>
+        <pre class="mini mono">ComputeBudget(
+  rtf=0.10,
+  cpu_share=0.35,
+  speaking_duty=0.5,
+).max_pool_size()   # → 7</pre>
+      </div>
+      <div class="card">
+        <h3>Already shipping in games</h3>
+        <p>PUBG's <b>Ally Duo</b> runs a quantized <b>2B Mistral-NeMo-Minitron fully on-device</b>
+        (RTX, ≥8 GB VRAM shared with the game). Its System-1 behaviour tree acts at tick rate while
+        the System-2 model reasons separately — reflexes never wait for the model. Same split here.
+        inZOI's Smart Zoi uses a 0.5B Minitron.</p>
+      </div>
+    </div>
+
+    <h3 class="sub-head">Hybrid by design — bake what you can, generate what you can't</h3>
+    <div class="hybrid-grid">
+      <div class="hyb-row hyb-head mono">
+        <span>stage</span><span>build time (baked)</span><span>player's device</span><span>cloud</span>
+      </div>
+      <div class="hyb-row">
+        <span><b>Static dialogue</b></span>
+        <span class="yes">✅ best-quality TTS, one-off</span><span class="no">—</span><span class="no">—</span>
+      </div>
+      <div class="hyb-row">
+        <span><b>Reactive barks</b></span>
+        <span class="no">—</span><span class="yes">✅ local TTS · $0 per player</span><span class="no">—</span>
+      </div>
+      <div class="hyb-row">
+        <span><b>Open conversation</b></span>
+        <span class="no">—</span><span class="yes">✅ small local LLM + local TTS</span>
+        <span class="maybe">optional — hero moments only</span>
+      </div>
+    </div>
+    <p class="note">
+      Baking is the default on purpose: commodity cloud TTS runs <b>$4–$30 per 1M characters</b>
+      (Google Standard $4 / Neural2 $16 / Chirp 3 HD $30; Polly Standard $4 / Neural $16 /
+      Generative $30), so a 10,000-line bank is a rounding error and re-bakes free when the script
+      changes. On mobile the local path is real today: <b>Gemma 3 1B is 529 MB at int4 QAT</b>
+      (~2,585 tok/s prefill on a Galaxy S24 Ultra), and Apple's ~3B on-device model runs ~30 tok/s
+      on an iPhone 15 Pro, free to developers.
+    </p>
+
+    <h3 class="sub-head">Wiring into Wwise and FMOD</h3>
+    <p class="lead narrow">
+      The rule: <b>an AI voice must be an ordinary voice</b> — same buses, attenuation, occlusion,
+      reverb sends, ducking, and voice limiting the sound designer already authored. Anything else
+      means a second mix to maintain, and that is where AI dialogue starts sounding pasted-on.
+    </p>
+    <div class="grid2">
+      <div class="card engine">
+        <div class="engine-tag mono">WWISE</div>
+        <p>Stock <b>Audio Input source plug-in</b>. Register three global callbacks once via
+        <span class="mono">SetAudioInputCallbacks()</span>: the engine calls the format callback at
+        the start of playback and the execute callback every audio frame until stop or
+        <span class="mono">AK_NoMoreData</span>.</p>
+        <ul class="facts mono">
+          <li>Unreal: subclass <b>UAkAudioInputComponent</b>, override FillSamplesBuffer + GetChannelConfig</li>
+          <li>start with <b>Post Associated Audio Input Event</b> — a plain PostEvent will not drive it</li>
+          <li>proven transport: ReadSpeaker speechEngine, 4Players ODIN, Unreal AudioLink</li>
+        </ul>
+      </div>
+      <div class="card engine">
+        <div class="engine-tag mono">FMOD</div>
+        <p>A user-created sound: <span class="mono">createSound</span> with
+        <span class="mono">FMOD_OPENUSER</span> + <span class="mono">FMOD_CREATESOUNDEXINFO</span>
+        (defaultfrequency, numchannels, format, <span class="mono">pcmreadcallback</span>). FMOD pulls
+        PCM in <span class="mono">decodebuffersize</span> blocks.</p>
+        <ul class="facts mono">
+          <li>hand it to a <b>programmer instrument</b> via CREATE_PROGRAMMER_SOUND, release on DESTROY</li>
+          <li>inherits the event's 3D panning, buses and effects</li>
+          <li>concurrency already solved: maxchannels 256–1024 virtual · softwareChannels 64 real</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">
+      No middleware? Unity's <span class="mono">OnAudioFilterRead</span> /
+      <span class="mono">PCMReaderCallback</span>, Unreal's
+      <span class="mono">USoundWaveProcedural::QueueAudio</span>. The framework's sink contract is two
+      methods — <span class="mono">push(pcm, sample_rate)</span> and
+      <span class="mono">flush()</span> — so the native shim is mechanical. <b>flush() is the barge-in
+      path</b>: it must drop queued audio instantly, or the NPC keeps talking after the player cut them off.
+    </p>
+
+    <div class="warn-box">
+      <div class="warn-head mono">⚠ LICENSING IS THE REAL TRAP — NOT PERFORMANCE</div>
+      <ul>
+        <li><b>Piper</b> moved to <span class="mono">piper1-gpl</span>, which is <b>GPL-3.0</b> (the MIT
+        <span class="mono">rhasspy/piper</span> was archived read-only, 2025-10-06). It embeds espeak-ng,
+        so it blocks <em>any</em> linking — dynamic included. Pinning the old MIT code does not help:
+        its CMake still links GPL espeak-ng. Routes that work: run it out-of-process (you still convey a
+        GPL binary — take counsel, and GPLv3 Installation Information is a real problem on locked
+        consoles), or use an MIT fork with espeak-free G2P such as <span class="mono">ayutaz/piper-plus</span>.</li>
+        <li><b>Voice models carry their own licenses</b>, separately from the engine — and
+        <span class="mono">en_US-lessac</span>, the voice in Piper's own examples, sits under the
+        restrictive Blizzard 2013 license. Check every MODEL_CARD you ship.</li>
+        <li><b>Kokoro-82M is Apache-2.0 including weights</b> (8 languages, 54 voices, 86–326 MB ONNX) —
+        clean, but it measured <b>RTF 2.77–6.63 on a Raspberry Pi 4</b>: not real-time on low-power ARM.
+        Fine on desktop; benchmark before betting a handheld target on it.</li>
+        <li><b>sherpa-onnx</b> (Apache-2.0) is the most shippable runtime — Windows/Linux/macOS/Android/iOS,
+        x86/ARM/RISC-V, 12 bindings, fully offline — but today still pulls GPL espeak-ng via
+        piper-phonemize (upstream issue open to strip it).</li>
+      </ul>
+      <p>None of this blocks shipping. It means picking the stack with a lawyer in the room — and because
+      every provider sits behind the same adapter contract, that choice is a swap, not a rewrite.</p>
     </div>
   </section>
 

@@ -258,11 +258,19 @@ if (canvas) {
     el.style.setProperty("--stagger", String(i % 3));
   });
   if (reducedMotion || !("IntersectionObserver" in window)) {
-    targets.forEach((el) => el.classList.add("in"));
-    return;
+    return; // content stays visible; nothing to animate
   }
+  // Only now is it safe to hide: the observer below will bring it back.
+  document.documentElement.classList.add("js-reveal");
+  // Belt and braces — if no observer callback has fired within 2s (a hidden
+  // tab, a throttled background render), show everything rather than risk a
+  // blank page.
+  const failSafe = setTimeout(() => {
+    document.documentElement.classList.remove("js-reveal");
+  }, 2000);
   const io = new IntersectionObserver(
     (entries) => {
+      clearTimeout(failSafe);
       for (const entry of entries) {
         if (entry.isIntersecting) {
           entry.target.classList.add("in");
@@ -284,7 +292,9 @@ if (canvas) {
     const target = parseInt(el.dataset.count, 10);
     const prefix = el.dataset.prefix || "";
     const suffix = el.dataset.suffix || "";
-    const render = (v) => { el.innerHTML = prefix + v + suffix; };
+    // Thousands separators, so an animated 1135 lands on "$1,135" — the same
+    // string the static HTML shows before the animation runs.
+    const render = (v) => { el.innerHTML = prefix + v.toLocaleString("en-US") + suffix; };
     if (reducedMotion) { render(target); return; }
     const dur = 700;
     const t0 = performance.now();
