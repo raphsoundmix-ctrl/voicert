@@ -1,0 +1,25 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "VoiceRT NPC",
+  "Description": "Drop a talking NPC onto any Actor. Streams real-time synthesized voice from a VoiceRT runtime into a procedural sound wave, with barge-in flush, subtitles, tool callbacks and dialogue LOD.",
+  "Category": "Audio",
+  "CreatedBy": "Raph",
+  "CreatedByURL": "https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo",
+  "DocsURL": "https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo#drop-in-engine-assets",
+  "MarketplaceURL": "",
+  "SupportURL": "https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/issues",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": false,
+  "Installed": false,
+  "EngineVersion": "5.3.0",
+  "Modules": [
+    {
+      "Name": "VoiceRT",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

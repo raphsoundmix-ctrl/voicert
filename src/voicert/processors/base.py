@@ -112,6 +112,10 @@ class TTSService(FrameProcessor):
             if frame.final:
                 self.ctx.agent_stopped_speaking()
                 self._spoken_in_turn.pop(frame.turn_id, None)
+                # The end-of-turn marker travels on to the sink so a
+                # transport (or a game engine bridge) can close its
+                # subtitle / lip-sync segment without peeking at state.
+                yield frame
             return
         turn_id = frame.turn_id
         if turn_id not in self._spoken_in_turn:
@@ -128,6 +132,9 @@ class TTSService(FrameProcessor):
             self._spoken_in_turn[turn_id] = spoken_target
             self.ctx.state.mark_spoken(turn_id, spoken_target)
             yield audio
+        # The text follows its own audio downstream, so subtitles and
+        # viseme generation receive the words at the moment they are voiced.
+        yield frame
 
     async def on_interrupt(self, frame: InterruptionFrame) -> None:
         self._spoken_in_turn.clear()

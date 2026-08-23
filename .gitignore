@@ -15,3 +15,6 @@ build/
 node_modules/
 .DS_Store
 Thumbs.db
+integrations/unity/tests/VoiceRT.Core.Tests/bin/
+integrations/unity/tests/VoiceRT.Core.Tests/obj/
+integrations/unreal/tests/out/

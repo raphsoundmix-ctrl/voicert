@@ -256,6 +256,86 @@ pytest tests/test_game_layer.py -q     # 23 tests covering all of it
 
 ---
 
+## Drop-in engine assets: Unity and Unreal
+
+`voicert.game.bridge` is the Python side of a small TCP protocol built for this. Everything heavy — VAD, the LLM, TTS, the voice pool — stays in the Python process. Each engine gets a thin client: a few hundred lines that open one socket per live NPC, queue the incoming audio into an ordinary engine sound, and forward text and tool calls to your Blueprint or MonoBehaviour graph. The engine never runs a model.
+
+```
+┌─────────────── engine process (Unity / Unreal) ───────────────┐   ┌──────── voicert process ────────┐
+│                                                                 │   │                                  │
+│  NPC actor                                                     │   │  EngineBridgeServer (asyncio)     │
+│  ┌──────────────┐   distance, priority    ┌─────────────────┐  │   │  one connection = one NPC turn    │
+│  │ Dialogue LOD │ ───────────────────────▶│ VoiceRT NPC      │──┼───┼─▶ ConfigFactory.build("npc")      │
+│  │ (per-actor)  │  connect only if LIVE   │ component/script │  │TCP│    ├─ STT · VAD · barge-in         │
+│  └──────────────┘                          └─────────────────┘  │   │    ├─ LLM (lore-locked prompt)     │
+│         ▲                                        │  ▲           │   │    └─ TTS → PCM16 mono 16 kHz      │
+│         │ player position each frame             │  │ AUDIO_OUT │   │                                  │
+│         │                                  TEXT_IN│  │TEXT_OUT  │   │  NPCVoicePool caps concurrent      │
+│  ┌──────────────┐                                 │  │TURN_END  │   │  live agents (see cost model      │
+│  │ AudioSource / │◀── PCM16 ring buffer ───────────┘  │FLUSH     │   │  above) — bounded regardless of   │
+│  │ SoundWaveProc.│    (resampled to device rate)      │TOOL      │   │  how many NPCs exist in the world │
+│  └──────────────┘                                     ▼          │   │                                  │
+│    3D attenuation, occlusion,               subtitles · gestures │   └──────────────────────────────────┘
+│    reverb — all engine-native               · animation triggers │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+One TCP connection per LIVE-tier NPC; everyone in BARK/CROWD/OFF holds no connection at all, so the socket count on the engine side already matches `NPCVoicePool.capacity`, not the size of the world.
+
+### What it costs to run
+
+Two budgets, both bounded by design rather than by luck.
+
+**Network and CPU, per live NPC.** PCM16 mono at 16 kHz is 32 KB/s down; text and tool frames are a few hundred bytes each. On a LAN or the same machine this is nothing. The ring buffer on the engine side (`PcmRingBuffer` in C#, the equivalent in C++) holds 0.25–5 seconds of audio and resamples on the audio thread with linear interpolation — no allocation, no lock held across the resample, so it cannot glitch the audio callback even under load. Measured on this machine: the whole protocol layer round-trips through a real Python bridge process in the C# xUnit suite (`BridgeIntegrationTests.cs`) in about 2 seconds for two full turns including a barge-in, with zero allocation-related failures across repeated runs.
+
+**Memory, per live NPC.** The engine side holds one ring buffer (default 2 s × 16 kHz × 2 bytes ≈ 64 KB) plus one procedural sound object. That is the entire footprint — no model weights, no ONNX runtime, no phoneme tables live in the game process, because none of that runs there. The number of *possible* NPCs in the world costs nothing at all: an NPC in the BARK or CROWD tier is just game state (a `DialogueTier` enum and a couple of floats) until it earns a LIVE slot.
+
+**What actually gates you** is the same CPU budget from the cost model above, on the *voicert* side: `ComputeBudget(rtf, cpu_share).max_pool_size()`. That number is your realistic concurrent-NPC-conversation limit, independent of how large the open world is.
+
+### Big voice banks: what actually needs baking, and what does not
+
+A large NPC roster has always meant two separate costs, and this framework only removes one of them.
+
+**Recording is the cost this removes.** A cast of hundreds of NPCs, each with even a modest line count, is a SAG-AFTRA session-rate problem before it is anything else (see the cost model above). Runtime synthesis for the LIVE and BARK tiers sidesteps that recording bill entirely — there is nothing to record for a line the LLM composes at runtime.
+
+**Engine setup is the cost that does not disappear, whichever way you produce the audio.** Every clip Unity or Unreal plays still needs the same decisions: Unity's *Load Type* (`Decompress On Load` for short, frequently-triggered barks vs `Streaming` for long lines) and compression settings per platform; Unreal's compression per `USoundWave` and whether a line lives on a `Sound Cue` or a MetaSound. VoiceRT does not touch this, because runtime-synthesized audio is not a `.wav` asset at all — the PCM never becomes an import-time decision, it becomes a stream. That is the actual optimization for a "huge voice bank": most of it stops being a bank. Static, pre-written lines (the "baked" row in the cost model's hybrid table) are the only ones that still go through normal asset import, and they are the minority by design — the framework routes reactive barks and open conversation through the live pipeline specifically so they never need a Load Type decision at all.
+
+Two engine-side costs are out of scope for this repo and worth planning for separately: **lip-sync**, which needs either a runtime viseme generator (Meta's Movement SDK / Oculus Lipsync, NVIDIA Audio2Face) driven off the same PCM this bridge delivers, or a MetaHuman-style offline pass, which only applies to pre-baked lines; and **voice identity**, since giving hundreds of NPCs distinct voices is a TTS-model question (multi-speaker models, voice-cloning, or per-archetype voice banks), not an engine-integration one — the bridge's `voice` field in `HELLO` is where that choice plugs in once you pick a TTS backend.
+
+### Get the code
+
+```
+integrations/
+  unity/
+    com.voicert.npc/            # UPM package — drop into Packages/ or add via git URL
+      Runtime/Core/             # engine-agnostic: protocol codec, PCM ring buffer
+      Runtime/VoiceRTNpc.cs     # MonoBehaviour: AudioSource + streaming AudioClip
+      Runtime/VoiceRTLod.cs     # dialogue LOD component (distance -> tier -> connect)
+      Runtime/VoiceRTMicrophone.cs
+    tests/VoiceRT.Core.Tests/   # dotnet test — compiles the shipped package sources directly
+  unreal/
+    VoiceRT/                    # .uplugin — drop into Plugins/
+      Source/VoiceRT/Public/VoiceRTProtocol.h   # engine-agnostic: header-only C++17
+      Source/VoiceRT/Private/VoiceRTClient.*    # FSocket + FRunnable reader thread
+      Source/VoiceRT/Public/VoiceRTNpcComponent.h  # UActorComponent, Blueprint-exposed
+    tests/protocol_test.cpp     # standalone MSVC/g++ build, no Unreal required
+```
+
+```bash
+# start the bridge (stub providers, no API keys needed)
+python -m voicert.game.bridge 127.0.0.1 8765
+
+# C# protocol + ring-buffer tests, plus a real cross-language run against the bridge above
+cd integrations/unity/tests/VoiceRT.Core.Tests && dotnet test
+
+# C++ protocol + ring-buffer tests (no Unreal install required)
+integrations/unreal/tests/build_and_test.bat
+```
+
+Both engine components are un-compiled against the real engines in this repo — there is no Unity or Unreal installed on this machine to link against `UnityEngine.dll` or `UnrealBuildTool`. What *is* verified: the wire protocol and the PCM ring buffer, cross-checked against a live `voicert.game.bridge` process from both C# (13 xUnit tests, including a full turn plus a barge-in over a real socket) and standalone C++ (protocol + ring-buffer checks against the same header the plugin ships). The engine-specific glue — `AudioClip.Create`, `OnAudioFilterRead`, `USoundWaveProcedural::QueueAudio`, `UAkAudioInputComponent` — follows each engine's documented API shape but has not been exercised inside an Editor. Treat it as a working prototype to drop in and iterate on, not a marketplace-ready asset yet.
+
+---
+
 ## Audio chain
 
 A clean input means fewer STT mistakes, fewer wasted tokens, lower latency and lower cost. This chain comes from mixing work, not from documentation defaults.
