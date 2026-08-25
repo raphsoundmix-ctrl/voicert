@@ -334,6 +334,27 @@ integrations/unreal/tests/build_and_test.bat
 
 Both engine components are un-compiled against the real engines in this repo — there is no Unity or Unreal installed on this machine to link against `UnityEngine.dll` or `UnrealBuildTool`. What *is* verified: the wire protocol and the PCM ring buffer, cross-checked against a live `voicert.game.bridge` process from both C# (13 xUnit tests, including a full turn plus a barge-in over a real socket) and standalone C++ (protocol + ring-buffer checks against the same header the plugin ships). The engine-specific glue — `AudioClip.Create`, `OnAudioFilterRead`, `USoundWaveProcedural::QueueAudio`, `UAkAudioInputComponent` — follows each engine's documented API shape but has not been exercised inside an Editor. Treat it as a working prototype to drop in and iterate on, not a marketplace-ready asset yet.
 
+### Adding it to a Unity 6 project
+
+Two things to get out of the way first. **Unity Cloud** (the platform at `docs.unity.com/en-us/cloud` — Asset Manager, DevOps, build automation, multiplayer services) is unrelated to this: it is Unity's hosted-services product, not the mechanism for adding a package to a project. Attaching a component to a GameObject is a purely local Editor operation, whether the package came from disk or from a URL. And this package targets plain UnityEngine APIs (`AudioSource`, `AudioClip.Create`), so nothing about it is Unity-6-specific — it installs the same way in Unity 6 as any other custom package.
+
+**1. Install the package.** In the Unity 6 Package Manager (`Window > Package Manager > + `), either:
+
+- **From a git URL**, pointing at the subfolder this package actually lives in — the repo root is not a package, `integrations/unity/com.voicert.npc/` is:
+  ```
+  https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo.git?path=/integrations/unity/com.voicert.npc
+  ```
+  Package Manager fetches straight from GitHub; nothing to clone by hand.
+- **From disk**, if you already have the repo checked out: `+ > Install package from disk`, then browse to `integrations/unity/com.voicert.npc/package.json` and double-click it. Unity records this as a `"file:"` reference in `Packages/manifest.json` rather than copying the files, so pulling the repo updates the package too.
+
+**2. Attach it to the NPC.** Select the NPC's GameObject (or create one), then `Add Component > VoiceRT > VoiceRT NPC`. `VoiceRTNpc` requires an `AudioSource`, so Unity adds one automatically if it is missing. Fill in the Inspector fields: `Host`/`Port` for the bridge (`127.0.0.1:8765` for local testing), `Npc Id`, `Character`, and `Lore Scope` for this specific NPC.
+
+**3. Optional: wire up distance-based LOD.** `Add Component > VoiceRT > VoiceRT Dialogue LOD` on the same object. It disables `Connect On Begin Play` on `VoiceRTNpc` automatically and instead opens/closes the bridge connection itself as the player crosses the LIVE-tier distance — this is what keeps a whole scene of NPCs from holding hundreds of open sockets at once.
+
+**4. Run the bridge, then press Play.** From the repo root: `python -m voicert.game.bridge 127.0.0.1 8765`. In Play Mode the NPC connects, and `npc.Say("...")` (or the LOD component, once the player is close enough) drives a real turn — the same pipeline the Python tests exercise, now feeding an `AudioSource` in your scene.
+
+Everything Unreal-side works the same way conceptually — `Plugins > Add > from disk` or a git submodule pointing at `integrations/unreal/VoiceRT/`, then `Add Component > VoiceRT NPC` on the Actor — see `VoiceRTNpcComponent.h` for the exposed Blueprint properties and delegates.
+
 ---
 
 ## Audio chain
