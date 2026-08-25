@@ -334,6 +334,59 @@ integrations/unreal/tests/build_and_test.bat
 
 Both engine components are un-compiled against the real engines in this repo — there is no Unity or Unreal installed on this machine to link against `UnityEngine.dll` or `UnrealBuildTool`. What *is* verified: the wire protocol and the PCM ring buffer, cross-checked against a live `voicert.game.bridge` process from both C# (13 xUnit tests, including a full turn plus a barge-in over a real socket) and standalone C++ (protocol + ring-buffer checks against the same header the plugin ships). The engine-specific glue — `AudioClip.Create`, `OnAudioFilterRead`, `USoundWaveProcedural::QueueAudio`, `UAkAudioInputComponent` — follows each engine's documented API shape but has not been exercised inside an Editor. Treat it as a working prototype to drop in and iterate on, not a marketplace-ready asset yet.
 
+### Talking to an NPC with a real microphone, fully offline
+
+No cloud, no API keys. Every stage has a local counterpart, and three of the four are already wired.
+
+```
+Unity Microphone ──PCM16 16 kHz──▶ AUDIO_IN ──▶ [ VAD ] ──▶ [ UtteranceSegmenter ]
+                                                   │                    │
+                                    barge-in ◀─────┘        one whole utterance
+                                                                        ▼
+        AudioSource ◀── AUDIO_OUT ◀── [ TTS ] ◀── sentences ◀── [ local LLM ] ◀── [ Whisper ]
+```
+
+**The part that is not obvious.** A microphone hands you 20-50 ms chunks forever; Whisper wants one complete utterance. Something has to decide where an utterance begins and ends, and feeding the model individual chunks produces confident nonsense — every chunk looks like a complete short sentence to it. `voicert.utterance.UtteranceSegmenter` is that decision. It keeps a rolling **pre-roll** buffer (300 ms by default) and prepends it when the VAD fires, because a VAD needs energy before it triggers — without pre-roll the model hears "ello" instead of "hello". It also drops anything under 250 ms (coughs, chair scrapes) and force-flushes past 20 s, so a fan near the mic cannot grow the buffer until the process dies. Set `transport.segmenter` and only whole utterances reach the pipeline; leave it unset and the old chunk-per-frame behaviour is unchanged.
+
+The second non-obvious piece is **sentence chunking before TTS**. Feeding the LLM's token stream straight into synthesis gives every word its own falling intonation. `SentenceBuffer` holds tokens until a sentence boundary, then releases the whole clause, so TTS can place stress and breath — with a character-count escape hatch for models that forget punctuation.
+
+**Measured on this machine** (RTX 4080, Ollama, NPC profile, warm model):
+
+| Model | TTFT | First sentence ready | Full reply | VRAM |
+|---|---|---|---|---|
+| `qwen3:1.7b` | **~345 ms** | **~390 ms** | ~510 ms | 1.7 GB |
+| `qwen3:14b` | ~350–760 ms | — | ~1150–1340 ms | 9.6 GB |
+| `qwen3:14b` **cold** | **7 480 ms** | — | 8 380 ms | — |
+
+Two conclusions a game actually has to act on. The 1.7B lands inside the NPC profile's 300 ms first-token target and leaves ~14 GB of the card for the renderer; the 14B is 2.5× slower to finish and takes 9.6 GB, which on a 16 GB card is competing with your own game. And that cold row is not a curiosity: `ollama ps` shows `UNTIL 4 minutes from now`, because Ollama evicts an idle model by default — so the first NPC to speak after a quiet stretch pays 7.5 s. `OllamaLLM` therefore defaults to `keep_alive=-1` and exposes `await llm.warmup()` to call during level load.
+
+**Wiring it up:**
+
+```bash
+pip install -e ".[local]"          # faster-whisper + httpx + sherpa-onnx
+ollama pull qwen3:1.7b
+```
+
+```python
+from voicert.config import ConfigFactory
+from voicert.processors.local import OllamaLLM, SherpaOnnxTTS, WhisperSTT
+from voicert.utterance import UtteranceConfig, UtteranceSegmenter
+
+runtime = ConfigFactory.build("npc", processors=[
+    WhisperSTT(ctx, model_size="base.en", device="cuda", compute_type="float16"),
+    OllamaLLM(ctx, model="qwen3:1.7b"),
+    SherpaOnnxTTS(ctx, model="voice.onnx", tokens="tokens.txt"),
+])
+runtime.transport.segmenter = UtteranceSegmenter(UtteranceConfig(), sample_rate=16_000)
+await runtime.ctx.llm.warmup()     # during level load, not on first line
+```
+
+On the Unity side add `VoiceRT Microphone` next to `VoiceRT NPC` — it already streams PCM16 mono 16 kHz into `AUDIO_IN`, which is exactly what the segmenter and Whisper expect.
+
+**One gotcha worth planning for.** With the mic always open, the VAD hears the NPC's own voice through the player's speakers and fires barge-in at itself. Headphones make it disappear; otherwise use push-to-talk (gate `SendMicAudio` behind a key) or real acoustic echo cancellation. Do not "fix" it by muting the mic while the agent speaks — that removes barge-in, which is the whole point of the design.
+
+**Status:** the segmenter and sentence buffer are covered by 14 tests and the local LLM path has been run end-to-end against a live Ollama on this machine (numbers above). `WhisperSTT` and `SherpaOnnxTTS` follow their libraries' documented APIs but have not been executed here — neither package is installed in this environment, and no voice model has been downloaded.
+
 ### Adding it to a Unity 6 project
 
 Two things to get out of the way first. **Unity Cloud** (the platform at `docs.unity.com/en-us/cloud` — Asset Manager, DevOps, build automation, multiplayer services) is unrelated to this: it is Unity's hosted-services product, not the mechanism for adding a package to a project. Attaching a component to a GameObject is a purely local Editor operation, whether the package came from disk or from a URL. And this package targets plain UnityEngine APIs (`AudioSource`, `AudioClip.Create`), so nothing about it is Unity-6-specific — it installs the same way in Unity 6 as any other custom package.

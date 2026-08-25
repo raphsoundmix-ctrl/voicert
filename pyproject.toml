@@ -24,6 +24,10 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
+local-stt = ["faster-whisper>=1.0", "numpy>=1.24"]
+local-llm = ["httpx>=0.27"]
+local-tts = ["sherpa-onnx>=1.10", "numpy>=1.24"]
+local = ["faster-whisper>=1.0", "httpx>=0.27", "sherpa-onnx>=1.10", "numpy>=1.24"]
 dev = ["pytest>=8", "pytest-asyncio>=0.24", "mypy>=1.11"]
 webrtc = ["aiortc>=1.9"]
 vad = ["onnxruntime>=1.18", "numpy>=1.26"]
@@ -40,3 +44,10 @@ testpaths = ["tests"]
 python_version = "3.11"
 strict = true
 files = ["src/voicert"]
+
+# Optional local-provider runtimes: installed via the `local*` extras, absent
+# in the default dev environment. Each import sits inside a try/except that
+# raises a readable message, so a missing stub here is expected, not a defect.
+[[tool.mypy.overrides]]
+module = ["faster_whisper.*", "sherpa_onnx.*", "numpy.*", "httpx.*"]
+ignore_missing_imports = true

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from voicert.frames import AudioFrame, Frame
+from voicert.utterance import UtteranceSegmenter
 
 logger = logging.getLogger("voicert.transport")
 
@@ -100,22 +101,53 @@ class BaseTransport:
 
     name = "transport"
 
-    def __init__(self, vad: EnergyVAD | None = None) -> None:
+    def __init__(
+        self,
+        vad: EnergyVAD | None = None,
+        segmenter: UtteranceSegmenter | None = None,
+    ) -> None:
         self.vad = vad
+        #: Set this when a real microphone is attached. Without it every
+        #: incoming chunk becomes its own AudioFrame, which is right for the
+        #: stub providers and wrong for any real STT model — see
+        #: ``voicert.utterance`` for why.
+        self.segmenter = segmenter
         self.on_speech_start: Callable[[], None] | None = None
         self.on_speech_end: Callable[[], None] | None = None
         self.on_user_audio: Callable[[AudioFrame], Awaitable[None]] | None = None
 
     async def feed_input(self, pcm: bytes, sample_rate: int = 16_000) -> None:
         """Push microphone/line audio into the framework."""
-        if self.vad is not None:
-            event = self.vad.feed(pcm, sample_rate)
+        event = self.vad.feed(pcm, sample_rate) if self.vad is not None else None
+
+        if self.segmenter is None:
+            # Chunk-per-frame: what the stub providers and the offline demo want.
             if event is VADEvent.SPEECH_START and self.on_speech_start:
                 self.on_speech_start()
             elif event is VADEvent.SPEECH_END and self.on_speech_end:
                 self.on_speech_end()
-        if self.on_user_audio is not None:
-            await self.on_user_audio(AudioFrame(pcm=pcm, sample_rate=sample_rate, source="user"))
+            if self.on_user_audio is not None:
+                await self.on_user_audio(
+                    AudioFrame(pcm=pcm, sample_rate=sample_rate, source="user")
+                )
+            return
+
+        # Utterance mode: the segmenter sees every chunk, but only a complete
+        # utterance reaches the pipeline.
+        overflow = self.segmenter.feed(pcm)
+        if event is VADEvent.SPEECH_START:
+            self.segmenter.begin()
+            if self.on_speech_start:
+                self.on_speech_start()   # barge-in still fires on the leading edge
+        elif event is VADEvent.SPEECH_END:
+            if self.on_speech_end:
+                self.on_speech_end()
+            overflow = self.segmenter.end() or overflow
+
+        if overflow and self.on_user_audio is not None:
+            await self.on_user_audio(
+                AudioFrame(pcm=overflow, sample_rate=sample_rate, source="user")
+            )
 
     async def sink(self, frame: Frame) -> None:
         """Pipeline output lands here. Override: play audio, flush on
