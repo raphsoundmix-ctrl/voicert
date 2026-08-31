@@ -6,7 +6,7 @@ An open-source Python framework built on asyncio. It takes the frame pipeline id
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![asyncio](https://img.shields.io/badge/asyncio-first-4f8cff)
-![Tests](https://img.shields.io/badge/tests-51%20passed-34d399)
+![Tests](https://img.shields.io/badge/tests-109%20passed-34d399)
 ![mypy](https://img.shields.io/badge/mypy-strict%20%E2%9C%93-34d399)
 ![Deps](https://img.shields.io/badge/core%20dependencies-0-a78bfa)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
@@ -57,7 +57,7 @@ The goal is an assistant whose knowledge base lives on the phone, with reasoning
 
 One caveat on that last row, because it is the row that decides whether the phone version happens. Piper's licensing and Kokoro's speed on low-power ARM both rule them out for a phone target as things stand today (details in [Licensing](#licensing-will-bite-you-before-performance-does)). Nothing has been benchmarked on a phone yet. The current candidate is sherpa-onnx with an espeak-free voice, and that still has to be measured.
 
-The demo already runs stub providers through the same interfaces a real model would use. 51 tests pass through those seams, so switching to a local model is an adapter, not a rebuild.
+The demo already runs stub providers through the same interfaces a real model would use. 109 tests pass through those seams, so switching to a local model is an adapter, not a rebuild.
 
 ---
 
@@ -350,15 +350,25 @@ Unity Microphone ──PCM16 16 kHz──▶ AUDIO_IN ──▶ [ VAD ] ──�
 
 The second non-obvious piece is **sentence chunking before TTS**. Feeding the LLM's token stream straight into synthesis gives every word its own falling intonation. `SentenceBuffer` holds tokens until a sentence boundary, then releases the whole clause, so TTS can place stress and breath — with a character-count escape hatch for models that forget punctuation.
 
-**Measured on this machine** (RTX 4080, Ollama, NPC profile, warm model):
+**Measured on this machine** (RTX 4080 16 GB, Ollama, `keep_alive=-1`, `think=false`, streamed `/api/chat`, timed to the first content chunk). A 12-turn tavern-keeper conversation with a 696-token persona prompt, prompt tokens plateauing at ~980:
 
-| Model | TTFT | First sentence ready | Full reply | VRAM |
-|---|---|---|---|---|
-| `qwen3:1.7b` | **~345 ms** | **~390 ms** | ~510 ms | 1.7 GB |
-| `qwen3:14b` | ~350–760 ms | — | ~1150–1340 ms | 9.6 GB |
-| `qwen3:14b` **cold** | **7 480 ms** | — | 8 380 ms | — |
+| Model | warm TTFT | full reply | cold first call | model file | VRAM actually held |
+|---|---|---|---|---|---|
+| `qwen3:1.7b` | **45 ms** | ~121 ms | 322 ms in-process / ~34 s from disk | 1.7 GB | **~2.3–2.7 GB** |
+| `qwen3:14b` | ~41 ms | ~710 ms | 7 959 ms | 9.6 GB | ~9.5 GB |
 
-Two conclusions a game actually has to act on. The 1.7B lands inside the NPC profile's 300 ms first-token target and leaves ~14 GB of the card for the renderer; the 14B is 2.5× slower to finish and takes 9.6 GB, which on a 16 GB card is competing with your own game. And that cold row is not a curiosity: `ollama ps` shows `UNTIL 4 minutes from now`, because Ollama evicts an idle model by default — so the first NPC to speak after a quiet stretch pays 7.5 s. `OllamaLLM` therefore defaults to `keep_alive=-1` and exposes `await llm.warmup()` to call during level load.
+Three things a game has to act on.
+
+**Time-to-first-token barely separates the two models — decode speed does.** Both prefill a short prompt in roughly 40 ms. The 1.7B finishes a reply in ~121 ms against the 14B's ~710 ms, and since first audio waits on the first *sentence* rather than the first token, that 5.9× gap is what actually pushes the 14B past the NPC profile's budget.
+
+**The VRAM column is what the card holds, not the file size.** `ollama ps` reports 1.7 GB for `qwen3:1.7b`; `nvidia-smi` taken at the same moment reports 2.3–2.7 GB, because the file excludes the KV cache and CUDA context. Budget against the larger number.
+
+**Ollama evicts an idle model by default** — `ollama ps` shows `UNTIL 4 minutes from now` — so the first NPC to speak after a quiet stretch pays a cold load measured here at ~34 s from disk. `OllamaLLM` therefore defaults to `keep_alive=-1` and exposes `await llm.warmup()` for level load.
+
+Two caveats that cut against these numbers, stated because they are the ones a reader would otherwise have to discover for themselves:
+
+- **This was an idle machine.** No game was rendering on the same GPU. Contention for VRAM, SM time and thermal headroom is unmeasured here, and on Windows the failure mode when you get it wrong is a stutter, not a smaller number.
+- **1.7B is fast but does not hold character.** Across the same 12 turns it referred to the innkeeper in the third person *from inside his own mouth* on four of them, regurgitated a few-shot example nearly verbatim, and contradicted its own room price. Latency at that size is solved; fidelity is not. Treat the local tier as a real option for barks and ambient chatter, and assume a larger model — local or cloud — for anything a quest depends on.
 
 **Wiring it up:**
 
@@ -409,6 +419,65 @@ Two things to get out of the way first. **Unity Cloud** (the platform at `docs.u
 Everything Unreal-side works the same way conceptually — `Plugins > Add > from disk` or a git submodule pointing at `integrations/unreal/VoiceRT/`, then `Add Component > VoiceRT NPC` on the Actor — see `VoiceRTNpcComponent.h` for the exposed Blueprint properties and delegates.
 
 ---
+
+## What a talking NPC costs to run
+
+A game designer put the objection better than most:
+
+> I sold a game for $10, and a player burned $15 of tokens.
+
+That is the right objection, and a one-time price against a per-use meter is a real structural problem. A subscription can absorb a heavy user by averaging them against a light one. A $10 purchase cannot: the revenue arrives once and the meter keeps running, and there is no playtime at which it stops. So the question is not whether that can happen. It is what the actual numbers are, and what in the framework stops them.
+
+### First, the bill is not where the argument assumes
+
+`voicert.economics` prices a turn from measured usage against rate cards read from the vendors on 2026-08-31. Run it yourself:
+
+```bash
+python tools/unit_economics.py
+```
+
+The turn is the real one from the benchmark above: 282 fresh + 700 cached prompt tokens, 23 output tokens, 92 characters synthesized, 3 s of player audio.
+
+| stack | per turn | LLM | STT | TTS | $15 buys |
+|---|---|---|---|---|---|
+| all cloud, cheap | $0.001532 | 1.7% | 8.2% | **90.1%** | 9 792 turns |
+| all cloud, premium | $0.005307 | 8.8% | 4.5% | **86.7%** | 2 826 turns |
+| cloud brain, local voice | $0.000152 | 17.7% | 82.3% | 0% | 98 814 turns |
+| fully on-device | $0.000000 | — | — | — | unbounded |
+
+**Speech synthesis is ~90% of a cloud voice turn. The language model is under 2%.** Everyone says "tokens", and tokens are the cheapest part. Swapping to a cheaper LLM optimizes a rounding error.
+
+That reframes the fix. The lever is not the model — it is the voice. And **local TTS is tractable where a local LLM is not**: a Piper-class voice is ~60 MB of CPU-only inference with no GPU, no CUDA and no vendor lock, so it runs on the ~47% of Steam machines with 8 GB of VRAM or less and the ~27% whose GPU is not NVIDIA (Steam Hardware Survey, July 2026). Moving that one modality on-device is a 10× cut. `PriceBook.hybrid_local_tts()` is that configuration.
+
+### Second, the meter needs a stop
+
+Every profile here already declares a **latency** budget and the pipeline holds it. `voicert.economics` gives a profile a **money** budget on the same footing:
+
+```python
+policy  = BudgetPolicy.from_revenue("10.00", margin_target=0.90)  # $1.00/player, enforced
+session = SessionLedger("tavern", PlayerLedger("p1", policy), policy, PriceBook.hybrid_local_tts())
+
+auth = session.authorize(estimate, TierPlan.local_tts())
+if isinstance(auth, BudgetDenied):
+    play(auth.fallback)          # pre-authored line — always affordable, never an error
+else:
+    session.settle(auth, actual)
+```
+
+Three properties, each tested:
+
+- **Denial is a value, not an exception.** Running out of budget returns a `BudgetDenied` carrying an affordable `fallback`; only programmer error raises. A player must never meet an error dialog because a studio hit a spending cap — they should meet an NPC reading its authored lines.
+- **Reserve, then settle.** Two NPCs talking to one player can each pass an affordability check and jointly bust the cap. Check-and-hold is one atomic step, so the ceiling holds under concurrency.
+- **Barge-in is a cost mechanism.** The pipeline already cancels generation the instant a player interrupts. `session.abandon()` is where that reaches the invoice: the prompt is owed, the unspoken remainder of the reply is not.
+
+Money is integer nano-dollars, never float — the guarantee is an invariant over a running sum, and float addition is not associative, so two players making identical turns in a different order would get different answers.
+
+### What the objection gets right
+
+- **A per-use meter against a one-time price has no upper bound.** That is a real structural mismatch, and nothing above makes it not one. It makes it *bounded*, which is a different claim.
+- **The measurements here are from an idle machine.** No renderer was competing for the GPU.
+- **A 1.7B model does not hold character** (four failures in twelve turns, above). The smallest model that survives a long conversation is unmeasured, and if it turns out to be 7–8B the local tier narrows to the machines that can spare 5–6 GB.
+- **The basic implementation really is a weekend.** Microphone → Whisper → LLM → TTS is not hard, and saying otherwise would be dishonest. What is not a weekend is everything that makes it survive contact with a game: barge-in that truncates memory to what was actually *heard*, VAD pre-roll, voice budgeting across 50 NPCs — and above all routing generated audio through the same busses, attenuation, occlusion and ducking as every other sound, which is the one part of this problem that is shaped like a game rather than like a voice agent.
 
 ## Audio chain
 
@@ -501,8 +570,15 @@ src/voicert/
     pool.py            # fixed-size agent pool with priority eviction
     sinks.py           # Wwise Audio Input and FMOD programmer-sound contracts
     budget.py          # CPU budget to pool size, and the recorded-vs-synthesized cost model
-tests/                 # 51 tests: pipeline, barge-in races, profile isolation, game layer
+  economics/           # runtime money, enforced like the latency budget
+    money.py           # integer nano-dollars; why not float, why not Decimal
+    prices.py          # LLM / STT / TTS rate cards with source and expiry
+    usage.py           # what a turn consumed -> what it costs (pure)
+    ledger.py          # reserve / settle / abandon, degrade instead of fail
+    planning.py        # affordable turns, required local share, ceiling from revenue
+tests/                 # 109 tests: pipeline, barge-in races, profile isolation, game layer, cost ceilings
 examples/              # run_demo.py (voice loop) and game_open_world.py (240-NPC square)
+tools/                 # unit_economics.py — prints the cost table from measured usage
 docs/                  # the demo site, plain HTML/CSS/JS
 ```
 
