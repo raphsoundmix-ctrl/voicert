@@ -3,7 +3,7 @@
 Keeping LLM, STT and TTS as separate prices is not tidiness. On every rate
 card surveyed for this module, **speech synthesis dominates a voice turn and
 the language model is a rounding error**: for a short NPC reply on a cheap
-cloud mix, TTS is ~88% of the bill and the LLM is ~4%. A design that collapses
+cloud mix, TTS is ~90% of the bill and the LLM is under 2%. A design that collapses
 these into one "AI cost" number optimizes the wrong term.
 
 Every price carries ``source`` and ``valid_until`` as *fields*, not comments,
@@ -297,7 +297,7 @@ class PriceBook:
     def hybrid_local_tts(cls) -> "PriceBook":
         """Cloud LLM and STT, **on-device TTS** — the configuration that matters.
 
-        Speech synthesis is ~88% of a cheap-cloud voice turn, and a Piper-class
+        Speech synthesis is ~90% of a cheap-cloud voice turn, and a Piper-class
         voice is ~60 MB of CPU-only inference with no GPU and no vendor lock.
         Moving just that one modality on-device is the single largest cost
         lever available, and unlike a local LLM it runs on the low-VRAM,

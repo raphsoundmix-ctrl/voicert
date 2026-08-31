@@ -6,7 +6,7 @@ An open-source Python framework built on asyncio. It takes the frame pipeline id
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![asyncio](https://img.shields.io/badge/asyncio-first-4f8cff)
-![Tests](https://img.shields.io/badge/tests-109%20passed-34d399)
+![Tests](https://img.shields.io/badge/tests-121%20passed-34d399)
 ![mypy](https://img.shields.io/badge/mypy-strict%20%E2%9C%93-34d399)
 ![Deps](https://img.shields.io/badge/core%20dependencies-0-a78bfa)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
@@ -57,7 +57,7 @@ The goal is an assistant whose knowledge base lives on the phone, with reasoning
 
 One caveat on that last row, because it is the row that decides whether the phone version happens. Piper's licensing and Kokoro's speed on low-power ARM both rule them out for a phone target as things stand today (details in [Licensing](#licensing-will-bite-you-before-performance-does)). Nothing has been benchmarked on a phone yet. The current candidate is sherpa-onnx with an espeak-free voice, and that still has to be measured.
 
-The demo already runs stub providers through the same interfaces a real model would use. 109 tests pass through those seams, so switching to a local model is an adapter, not a rebuild.
+The demo already runs stub providers through the same interfaces a real model would use. 121 tests pass through those seams, so switching to a local model is an adapter, not a rebuild.
 
 ---
 
@@ -443,7 +443,8 @@ The turn is the real one from the benchmark above: 282 fresh + 700 cached prompt
 | all cloud, cheap | $0.001532 | 1.7% | 8.2% | **90.1%** | 9 792 turns |
 | all cloud, premium | $0.005307 | 8.8% | 4.5% | **86.7%** | 2 826 turns |
 | cloud brain, local voice | $0.000152 | 17.7% | 82.3% | 0% | 98 814 turns |
-| fully on-device | $0.000000 | — | — | — | unbounded |
+| premium brain, local voice | $0.000707 | 66.1% | 33.9% | 0% | 21 216 turns |
+| fully on-device | $0.000000 | 0% | 0% | 0% | unbounded |
 
 **Speech synthesis is ~90% of a cloud voice turn. The language model is under 2%.** Everyone says "tokens", and tokens are the cheapest part. Swapping to a cheaper LLM optimizes a rounding error.
 
@@ -468,6 +469,7 @@ Three properties, each tested:
 
 - **Denial is a value, not an exception.** Running out of budget returns a `BudgetDenied` carrying an affordable `fallback`; only programmer error raises. A player must never meet an error dialog because a studio hit a spending cap — they should meet an NPC reading its authored lines.
 - **Reserve, then settle.** Two NPCs talking to one player can each pass an affordability check and jointly bust the cap. Check-and-hold is one atomic step, so the ceiling holds under concurrency.
+- **The ledger alone cannot make the ceiling hard, and says so.** By the time `settle()` runs the provider has already generated the tokens and the money is gone, and the estimate is *systematically* low because output length is unknown at authorize time. So `Authorization` hands the caller the cap — `auth.max_characters(book)` and `auth.max_output_tokens(book)` — to pass down to the provider. Use them and the bound is hard; ignore them and it is "the ceiling, plus one turn's overrun".
 - **Barge-in is a cost mechanism.** The pipeline already cancels generation the instant a player interrupts. `session.abandon()` is where that reaches the invoice: the prompt is owed, the unspoken remainder of the reply is not.
 
 Money is integer nano-dollars, never float — the guarantee is an invariant over a running sum, and float addition is not associative, so two players making identical turns in a different order would get different answers.
@@ -576,7 +578,7 @@ src/voicert/
     usage.py           # what a turn consumed -> what it costs (pure)
     ledger.py          # reserve / settle / abandon, degrade instead of fail
     planning.py        # affordable turns, required local share, ceiling from revenue
-tests/                 # 109 tests: pipeline, barge-in races, profile isolation, game layer, cost ceilings
+tests/                 # 121 tests: pipeline, barge-in races, profile isolation, game layer, cost ceilings
 examples/              # run_demo.py (voice loop) and game_open_world.py (240-NPC square)
 tools/                 # unit_economics.py — prints the cost table from measured usage
 docs/                  # the demo site, plain HTML/CSS/JS

@@ -100,27 +100,28 @@ def main() -> None:
     )
     print(f"  Moving only TTS on-device: {hybrid.affordable_turns:,} turns.")
 
-    for label, book, plan in [
+    mixes: list[tuple[str, PriceBook, TierPlan | None]] = [
         ("all cloud", PriceBook.standard(), None),
         (
             "cloud brain, local voice",
             PriceBook.hybrid_local_tts(),
             TierPlan.local_tts(CostTier.CLOUD_CHEAP),
         ),
-    ]:
+    ]
+    for mix_label, mix_book, mix_plan in mixes:
         share = required_local_share(
-            book=book,
+            book=mix_book,
             revenue_per_player_usd=args.revenue,
             expected_turns=args.turns,
             margin_target=args.margin,
-            cloud_plan=plan,
+            cloud_plan=mix_plan,
         )
         verdict = (
             "cloud alone clears the margin"
             if share == 0.0
             else f"{share:.0%} of turns must run on the player's hardware"
         )
-        print(f"\nTo serve {args.turns:,} turns/player — {label}: {verdict}.")
+        print(f"\nTo serve {args.turns:,} turns/player — {mix_label}: {verdict}.")
 
     print(
         "\nRates: "

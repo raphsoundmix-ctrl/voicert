@@ -43,7 +43,7 @@ testpaths = ["tests"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["src/voicert"]
+files = ["src/voicert", "tools"]
 
 # Optional local-provider runtimes: installed via the `local*` extras, absent
 # in the default dev environment. Each import sits inside a try/except that

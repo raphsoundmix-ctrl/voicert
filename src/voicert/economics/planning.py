@@ -165,8 +165,14 @@ def affordable_turns(
     # make `local_share=1.0` land on a nonzero cost and turn "unbounded" into
     # a large finite number.
     cloud_share = Decimal(1) - Decimal(str(local_share))
+    # The local term is included rather than assumed zero: a PriceBook *can*
+    # map CostTier.LOCAL to a paid table (a metered on-prem GPU), and silently
+    # dropping it would understate a mostly-local mix.
     blended = int(
-        (cloud.total_nusd * cloud_share).to_integral_value(rounding="ROUND_CEILING")
+        (
+            cloud.total_nusd * cloud_share
+            + local.total_nusd * Decimal(str(local_share))
+        ).to_integral_value(rounding="ROUND_CEILING")
     )
     turns = None if blended == 0 else allowance // blended
 

@@ -548,3 +548,178 @@ def test_session_summary_is_json_serializable():
     assert summary.shadow_cloud_nusd > summary.total_nusd, (
         "local TTS must show a saving against the all-cloud shadow"
     )
+
+
+# -- regressions: each of these was a real hole the ledger did not plug ---
+
+
+def test_session_policy_cannot_widen_the_players_lifetime_cap():
+    """`authorize` once checked the SESSION's lifetime ceiling while summing
+    the PLAYER's spend, so a per-NPC policy silently overrode the player cap."""
+    player = PlayerLedger("p", policy(10, 100, 1_000))
+    with pytest.raises(BudgetMisuseError):
+        SessionLedger("s", player, policy(10, 100, 10**9), PriceBook.standard())
+
+
+def test_lifetime_ceiling_is_the_players_not_the_sessions():
+    book = PriceBook(
+        {
+            CostTier.CLOUD_CHEAP: PriceTable(
+                "unit",
+                LLMPrice(input_nusd_per_mtok=1_000_000, output_nusd_per_mtok=0),
+                STTPrice.FREE,
+                TTSPrice.FREE,
+            )
+        }
+    )
+    player = PlayerLedger("p", policy(50, 50, 50))
+    session = SessionLedger("s", player, policy(50, 50, 50), book)
+    for _ in range(200):
+        auth = session.authorize(
+            TurnUsage(input_tokens=10), TierPlan.uniform(CostTier.CLOUD_CHEAP)
+        )
+        if isinstance(auth, BudgetDenied):
+            break
+        session.settle(auth)
+    assert player.lifetime_spent_nusd <= 50, "the player's ceiling must bind"
+
+
+def test_authorization_cannot_be_settled_through_another_players_session():
+    """auth_id comes from a per-player counter, so ids collide across players.
+
+    Settling one player's authorization through another player's session used
+    to drive the second ledger's reserved total negative and leak the first
+    reservation forever.
+    """
+    pol = policy(10**9, 10**9, 10**9)
+    book = PriceBook.standard()
+    alice = PlayerLedger("alice", pol)
+    bob = PlayerLedger("bob", pol)
+    a_session = SessionLedger("a", alice, pol, book)
+    b_session = SessionLedger("b", bob, pol, book)
+
+    a_auth = a_session.authorize(
+        TurnProfile.measured_npc().usage, TierPlan.uniform(CostTier.CLOUD_CHEAP)
+    )
+    assert not isinstance(a_auth, BudgetDenied)
+    with pytest.raises(BudgetMisuseError):
+        b_session.settle(a_auth)
+    assert bob.worst_case_exposure_nusd >= 0, "reserved must never go negative"
+    assert bob.lifetime_remaining_nusd <= pol.lifetime_ceiling_nusd
+
+
+def test_fallback_tier_must_be_free():
+    """A paid `degrade_to` made denial the most expensive path in the system:
+    the caller plays the fallback exactly when the budget is gone."""
+    with pytest.raises(BudgetMisuseError):
+        BudgetPolicy(
+            10,
+            100,
+            1000,
+            allowed_tiers=frozenset({CostTier.CANNED, CostTier.CLOUD_CHEAP}),
+            degrade_to=CostTier.CLOUD_CHEAP,
+        )
+
+
+def test_every_denial_fallback_is_actually_free():
+    _, session = ledgers(policy(0, 0, 0))
+    denial = session.authorize(
+        TurnProfile.measured_npc().usage, TierPlan.uniform(CostTier.CLOUD_CHEAP)
+    )
+    assert isinstance(denial, BudgetDenied)
+    assert denial.fallback.estimate.is_free
+
+
+def test_closing_a_session_charges_work_still_in_flight():
+    """Dropping an in-flight reservation under-counts real spend: the request
+    left the machine and the vendor will bill for it."""
+    player, session = ledgers(policy(10**9, 10**9, 10**9))
+    auth = session.authorize(
+        TurnProfile.measured_npc().usage, TierPlan.uniform(CostTier.CLOUD_CHEAP)
+    )
+    assert not isinstance(auth, BudgetDenied)
+    summary = session.close()
+    assert summary.leaked_authorizations == 1
+    assert player.lifetime_spent_nusd == auth.reserved_nusd, "money must be recorded"
+    assert player.worst_case_exposure_nusd == player.lifetime_spent_nusd
+
+
+def test_close_is_idempotent_and_a_closed_session_refuses_work():
+    _, session = ledgers(policy(10**9, 10**9, 10**9))
+    first = session.close()
+    second = session.close()
+    assert first.total_nusd == second.total_nusd
+    with pytest.raises(BudgetMisuseError):
+        session.authorize(
+            TurnProfile.measured_npc().usage, TierPlan.uniform(CostTier.CLOUD_CHEAP)
+        )
+    with pytest.raises(BudgetMisuseError):
+        session.record_free(
+            TurnProfile.measured_npc().usage, TierPlan.uniform(CostTier.LOCAL)
+        )
+
+
+def test_router_does_not_plan_local_tts_on_a_device_without_local():
+    """Pricing TTS at zero on hardware that must pay for it understates the
+    dominant cost component tenfold."""
+    pol = policy(10**9, 10**9, 10**9)
+    _, session = ledgers(pol)
+    router = TierRouter(pol, PriceBook.standard(), local_available=False)
+    decision = router.plan(
+        session=session, estimate=TurnProfile.measured_npc().usage, dialogue_tier=3
+    )
+    assert decision.plan.tts is not CostTier.LOCAL
+    assert decision.estimate.tts_nusd > 0
+
+
+def test_authorization_exposes_a_cap_the_caller_can_enforce():
+    """The ledger cannot bound a turn on its own — by settle() the tokens are
+    already generated. It hands the caller the cap to pass to the provider."""
+    pol = policy(2_000_000, 10**9, 10**9)
+    _, session = ledgers(pol, PriceBook.standard())
+    auth = session.authorize(
+        TurnProfile.measured_npc().usage, TierPlan.uniform(CostTier.CLOUD_CHEAP)
+    )
+    assert not isinstance(auth, BudgetDenied)
+    assert auth.max_settlement_nusd <= pol.per_turn_ceiling_nusd
+    chars = auth.max_characters(PriceBook.standard())
+    assert chars is not None and chars > 0
+    capped = auth.estimate.usage.with_output(output_tokens=23, characters_out=chars)
+    assert (
+        price_turn(capped, PriceBook.standard(), auth.plan).total_nusd
+        <= pol.per_turn_ceiling_nusd
+    )
+
+
+def test_local_tts_cap_is_unbounded_because_it_cannot_overspend():
+    _, session = ledgers(policy(10**9, 10**9, 10**9), PriceBook.hybrid_local_tts())
+    auth = session.authorize(
+        TurnProfile.measured_npc().usage, TierPlan.local_tts(CostTier.CLOUD_CHEAP)
+    )
+    assert not isinstance(auth, BudgetDenied)
+    assert auth.max_characters(PriceBook.hybrid_local_tts()) is None
+
+
+def test_shadow_cloud_saving_is_reported_for_a_fully_local_game():
+    """The one field that quantifies the local-inference saving must not read
+    zero exactly where the saving is total."""
+    pol = BudgetPolicy.local_only()
+    player = PlayerLedger("p", pol)
+    session = SessionLedger("s", player, pol, PriceBook.local_only())
+    for _ in range(10):
+        session.record_free(
+            TurnProfile.measured_npc().usage, TierPlan.uniform(CostTier.LOCAL)
+        )
+    summary = session.close()
+    assert summary.total_nusd == 0
+    assert summary.shadow_cloud_nusd > 0
+    assert summary.saved_vs_cloud_nusd == summary.shadow_cloud_nusd
+
+
+def test_abandon_overrun_is_counted_too():
+    _, session = ledgers(policy(10**9, 10**9, 10**9))
+    small = TurnUsage(input_tokens=10, characters_out=1)
+    auth = session.authorize(small, TierPlan.uniform(CostTier.CLOUD_CHEAP))
+    assert not isinstance(auth, BudgetDenied)
+    session.abandon(auth, TurnUsage(input_tokens=10, characters_out=100_000))
+    assert session.close().overruns == 1
