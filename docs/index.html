@@ -48,7 +48,8 @@
       <div class="chips">
         <span class="chip"><b data-count="50" data-suffix="&nbsp;ms">50&nbsp;ms</b> to first audio on stubs</span>
         <span class="chip"><b data-count="300" data-prefix="&lt;" data-suffix="&nbsp;ms">&lt;300&nbsp;ms</b> NPC audio deadline</span>
-        <span class="chip"><b data-count="51" data-suffix="/51">51/51</b> tests · mypy strict</span>
+        <span class="chip"><b data-count="121" data-suffix="/121">121/121</b> tests · mypy strict</span>
+        <span class="chip"><b>AltaLab</b> Fall 2026 cohort</span>
         <span class="chip"><b>0</b> core dependencies</span>
       </div>
       <div class="cta">
@@ -285,6 +286,12 @@
       for itself?</b> Both have numbers below, and the <span class="mono">voicert.game</span> module
       implements the answer.
     </p>
+    <p class="lead narrow">
+      NPCs are the focus. As part of the <b>AltaLab Fall 2026 cohort</b> the goal is one complete
+      solution: design a character once, package it as a single engine asset with its voice and
+      boundaries, drop it onto any NPC in Unity or Unreal, and talk to it. The audio side is built
+      with 14+ years of technical sound design and FMOD across PC, console and mobile.
+    </p>
 
     <div class="stat-row">
       <div class="stat">
@@ -490,13 +497,14 @@
     </p>
     <div class="grid3">
       <article class="card app npc">
-        <div class="app-head"><span class="app-emoji">🎮</span><h3>Wwise / FMOD NPC bridge</h3></div>
+        <div class="app-head"><span class="app-emoji">🎮</span><h3>NPC character asset (cohort focus)</h3></div>
         <p>The game's audio middleware becomes the transport. <b>Wwise or FMOD sends the player's voice
         into VoiceRT, and the NPC answers through the game's own audio bus</b>, in character and inside
-        the lore, with no dialogue trees and no scripted lines.</p>
+        the lore, with no dialogue trees and no scripted lines. AltaLab Fall 2026: ship this as one
+        asset a studio drops onto a character.</p>
         <ul class="facts mono">
-          <li>the NPC profile already talks to the engine over WebSocket or gRPC</li>
-          <li>middleware handles mixing and spatialization; VoiceRT listens, thinks and speaks</li>
+          <li>design once: who it is, what it knows, what it never says</li>
+          <li>one asset: persona + voice + boundaries, dropped onto Unity / Unreal NPCs</li>
           <li>0 ms interrupt gate, so a player can talk over an NPC and it reacts like a person</li>
         </ul>
       </article>

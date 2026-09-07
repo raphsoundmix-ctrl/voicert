@@ -10,8 +10,22 @@ An open-source Python framework built on asyncio. It takes the frame pipeline id
 ![mypy](https://img.shields.io/badge/mypy-strict%20%E2%9C%93-34d399)
 ![Deps](https://img.shields.io/badge/core%20dependencies-0-a78bfa)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
+![AltaLab](https://img.shields.io/badge/AltaLab-Fall%202026%20cohort-0070f3)
 
 **[Live demo](https://ai-voice-agent-demo-rose.vercel.app/)** — an interactive diagram of the three modes, a scripted session with an interruption, the audio chain, and where this is heading. Hosted on Vercel, deployed from this repo ([GitHub Pages mirror](https://raphsoundmix-ctrl.github.io/AI_Voice_Agent_Demo/)).
+
+---
+
+> ### The 30-second version
+>
+> A game designer called this economically dead on arrival: *"I sold a game for $10. A player burned $15 in tokens."* Measuring the real bill against live vendor rates said otherwise.
+>
+> | | |
+> |---|---|
+> | **90%** of a cloud voice turn's cost is speech synthesis — the LLM is under 2% | **10×** cheaper per turn moving synthesis on-device instead of chasing a smaller model |
+> | **652 → 6,587** turns funded per $1 budget: cloud-only vs. hybrid local voice | **3 + 4** Blockers/Majors an adversarial review caught before shipping |
+>
+> Fix: an enforced spending ceiling on the voice, the same way this already enforces latency. [The rest of the industry is spending its money on exactly that pattern right now](#this-is-a-moving-field-not-a-lone-bet).
 
 ---
 
@@ -37,7 +51,9 @@ The pipeline does not know or care which vendor is behind a stage. Every provide
 
 The game's audio middleware becomes the transport. Wwise or FMOD sends the player's voice into VoiceRT, and the NPC answers through the game's own audio bus, in character and inside the lore. No dialogue trees. The NPC profile already talks to the engine over WebSocket or gRPC, and its interrupt gate is 0 ms, so a player can talk over an NPC and it reacts like a person would.
 
-Details, costs and wiring: [Voicing an open world](#voicing-an-open-world-what-it-costs).
+**This is the focus.** VoiceRT is part of the **AltaLab Fall 2026 cohort**, and the cohort goal is one complete NPC solution rather than a general framework: a character is designed once (who it is, what it knows, what it never says), packaged as a single engine asset with its voice and boundaries, dropped onto any NPC in Unity or Unreal, and talked to. The team pairs the AI side with 14+ years of technical sound design and FMOD work across PC, console and mobile, because the part of this problem that is shaped like a game is the audio, not the model.
+
+Details, costs and wiring: [Voicing an open world](#voicing-an-open-world-what-it-costs) · engine assets: [Unity and Unreal](#drop-in-engine-assets-unity-and-unreal).
 
 ### Many languages, no rewrite
 
@@ -480,6 +496,22 @@ Money is integer nano-dollars, never float — the guarantee is an invariant ove
 - **The measurements here are from an idle machine.** No renderer was competing for the GPU.
 - **A 1.7B model does not hold character** (four failures in twelve turns, above). The smallest model that survives a long conversation is unmeasured, and if it turns out to be 7–8B the local tier narrows to the machines that can spare 5–6 GB.
 - **The basic implementation really is a weekend.** Microphone → Whisper → LLM → TTS is not hard, and saying otherwise would be dishonest. What is not a weekend is everything that makes it survive contact with a game: barge-in that truncates memory to what was actually *heard*, VAD pre-roll, voice budgeting across 50 NPCs — and above all routing generated audio through the same busses, attenuation, occlusion and ducking as every other sound, which is the one part of this problem that is shaped like a game rather than like a voice agent.
+
+---
+
+## This is a moving field, not a lone bet
+
+Two bets this project makes — cheap local voice models, and routing between a cheap model and an expensive one to hit a cost target — are both active research and investment fronts in 2026, not something unique here.
+
+**Local voice models, cheaper every quarter.** Self-hosted Kokoro-82M runs ~$0.65 per 1M characters vs. ~$100 for premium cloud TTS, and the Elo quality gap between open and commercial TTS has closed 64% (223 → 81) since 2023 ([OfflineTTS landscape report, 2026](https://offlinetts.com/blog/tts-stt-landscape-h1-2026/)). Kokoro itself now compresses to ~80 MB with no quality loss ([TTS Arena](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX)); newer entrants (Supertonic 3, Neuphonic's NeuTTS) push the curve further, and a June 2026 paper cuts TTS inference memory 75% via KV-cache compression ([arXiv 2606.09019](https://arxiv.org/abs/2606.09019)).
+
+**Cost-aware model routing is now a paid feature at every major vendor.** [RouteLLM](https://arxiv.org/abs/2406.18665) (Berkeley/LMSYS) showed a trained router cuts LLM cost 50%+ at ~95% top-model quality. AWS Bedrock, Microsoft Azure AI Foundry (an explicit "Cost" mode across 27 models), OpenAI's GPT-5, and Google's ["speculative cascades"](https://research.google/blog/speculative-cascades-a-hybrid-approach-for-smarter-faster-llm-inference/) all now ship the same idea. `TierPlan`/`TierRouter` here applies it to the one modality none of them route: voice.
+
+**Games are converging on the same pattern.** NVIDIA shipped on-device Qwen3-8B support for ACE in PC games (Oct 2025); Krafton's inZOI runs on-device NPCs. Covering an indie studio's "AI Village," Frisson Labs quotes the team choosing local inference explicitly "to negate the cost of inference" — the same trade made here ([Frisson Labs, May 2026](https://www.frisson-labs.com/ai-npcs-2026)).
+
+**The money already backing it.** AI inference is a ~$106–108B market in 2025 growing toward $500B+, and three inference-serving startups (Fireworks, Together AI, Baseten) each raised $800M–$1.5B in a single month in mid-2026 ([market.us](https://market.us/report/ai-inference-market/)).
+
+*This is a solo-built prototype, not a funded platform — the above is the field it sits inside, not a claim of parity with it.*
 
 ## Audio chain
 
