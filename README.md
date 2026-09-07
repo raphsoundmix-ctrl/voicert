@@ -1,8 +1,10 @@
-# VoiceRT — Realtime Voice Agent Framework
+# VoiceRT — AI Voice Agents for Game NPCs
 
-**A voice AI agent you can interrupt mid-sentence.**
+**A living NPC from a character sheet: real-time, in character, and you can interrupt it mid-sentence.**
 
-An open-source Python framework built on asyncio. It takes the frame pipeline idea from [Pipecat](https://github.com/pipecat-ai/pipecat), the barge-in (cutting the agent off mid-sentence) and voice activity detection from [LiveKit Agents](https://github.com/livekit/agents), and the state orchestration from Rapida AI. What it adds is three strict profiles: `sales`, `assistant`, `npc`. Each one is a different contract, not just a different prompt.
+An open-source AI voice agent system, built first for game NPCs. One asyncio core in Python, configured per job through three strict profiles — `sales`, `assistant`, `npc` — where each profile is a different contract, not a different prompt. The main solution is the NPC: design a character once, drop it onto any Unity or Unreal NPC, and talk to it inside the game's own audio.
+
+[Pipecat](https://github.com/pipecat-ai/pipecat), [LiveKit Agents](https://github.com/livekit/agents) and Rapida AI were studied as references for how production voice-agent systems are put together. The architecture, the profile system, the game layer and the economics model here were designed from scratch, not ported.
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![asyncio](https://img.shields.io/badge/asyncio-first-4f8cff)
@@ -10,7 +12,7 @@ An open-source Python framework built on asyncio. It takes the frame pipeline id
 ![mypy](https://img.shields.io/badge/mypy-strict%20%E2%9C%93-34d399)
 ![Deps](https://img.shields.io/badge/core%20dependencies-0-a78bfa)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
-![AltaLab](https://img.shields.io/badge/AltaLab-Fall%202026%20cohort-0070f3)
+![AltaLab](https://img.shields.io/badge/AltaLab%20accelerator-Fall%202026%20cohort-0070f3)
 
 **[Live demo](https://ai-voice-agent-demo-rose.vercel.app/)** — an interactive diagram of the three modes, a scripted session with an interruption, the audio chain, and where this is heading. Hosted on Vercel, deployed from this repo ([GitHub Pages mirror](https://raphsoundmix-ctrl.github.io/AI_Voice_Agent_Demo/)).
 
@@ -51,7 +53,7 @@ The pipeline does not know or care which vendor is behind a stage. Every provide
 
 The game's audio middleware becomes the transport. Wwise or FMOD sends the player's voice into VoiceRT, and the NPC answers through the game's own audio bus, in character and inside the lore. No dialogue trees. The NPC profile already talks to the engine over WebSocket or gRPC, and its interrupt gate is 0 ms, so a player can talk over an NPC and it reacts like a person would.
 
-**This is the focus.** VoiceRT is part of the **AltaLab Fall 2026 cohort**, and the cohort goal is one complete NPC solution rather than a general framework: a character is designed once (who it is, what it knows, what it never says), packaged as a single engine asset with its voice and boundaries, dropped onto any NPC in Unity or Unreal, and talked to. The team pairs the AI side with 14+ years of technical sound design and FMOD work across PC, console and mobile, because the part of this problem that is shaped like a game is the audio, not the model.
+**This is the focus.** VoiceRT was selected for **AltaLab**, the accelerator run by the **AltaIR Capital** fund. The Fall 2026 cohort is where this gets built with their support, and the goal is one complete NPC solution rather than a general framework: a character is designed once (who it is, what it knows, what it never says), packaged as a single engine asset with its voice and boundaries, dropped onto any NPC in Unity or Unreal, and talked to. The team pairs the AI side with 14+ years of technical sound design and FMOD work across PC, console and mobile, because the part of this problem that is shaped like a game is the audio, not the model.
 
 Details, costs and wiring: [Voicing an open world](#voicing-an-open-world-what-it-costs) · engine assets: [Unity and Unreal](#drop-in-engine-assets-unity-and-unreal).
 
@@ -87,7 +89,7 @@ Three mature systems each solve a different part of the problem:
 | **LiveKit Agents** | Python, Node.js | WebRTC infrastructure, semantic turn detection | Infrastructure (WebRTC server) |
 | **Rapida AI** | Go, TypeScript | Turnkey platform with an admin UI, gRPC | Platform (UI plus backend) |
 
-None of them treats strict named profiles as the core idea, where each profile has its own latency contract, its own isolated set of tools, and its own context policy. VoiceRT does. That is why it borrows ideas rather than code (ADR-001 records the decision).
+None of them treats strict named profiles as the core idea, where each profile has its own latency contract, its own isolated set of tools, and its own context policy. VoiceRT does. That is why they were used as references to learn from rather than as code to build on (ADR-001 records the decision).
 
 **Why Python and asyncio.** The voice-AI ecosystem lives in Python: Silero VAD, faster-whisper, every vendor SDK. A voice agent is almost pure I/O, and asyncio handles that cheaply. Most importantly, asyncio can cancel a task at any await point, and barge-in is built directly on that.
 
@@ -638,4 +640,4 @@ The interruption tests are the ones worth reading (`tests/test_interruption.py`)
 
 ## License
 
-MIT, © Raph. The frame pipeline (Pipecat), barge-in (LiveKit Agents) and profile orchestration (Rapida AI) are borrowed as architectural ideas. The implementation is original.
+MIT, © Raph. Pipecat, LiveKit Agents and Rapida AI were studied as references for voice-agent architecture. Every design decision and the implementation here are original.
