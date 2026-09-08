@@ -4,7 +4,7 @@
                        └── barge-in: the user speaks mid-answer, the agent
                            is cut, and history keeps only the SPOKEN prefix.
 
-Run:  python examples/run_demo.py [sales|assistant|npc]
+Run:  python examples/run_demo.py [npc]
 """
 
 from __future__ import annotations
@@ -63,4 +63,4 @@ async def main(profile: str) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main(sys.argv[1] if len(sys.argv) > 1 else "assistant"))
+    asyncio.run(main(sys.argv[1] if len(sys.argv) > 1 else "npc"))

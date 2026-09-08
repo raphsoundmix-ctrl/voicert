@@ -138,7 +138,7 @@ def main() -> None:
     print(f"  runtime cost per player   ${report['runtime_cost_per_player']:>12,.2f}  <- the point")
     print()
     print("  On-device synthesis has no marginal cost: the player's silicon")
-    print("  does the work, so dynamic dialogue does not scale with sales.")
+    print("  does the work, so dynamic dialogue does not scale with copies sold.")
 
 
 if __name__ == "__main__":
