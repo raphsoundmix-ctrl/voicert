@@ -3,11 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VoiceRT — AI Voice Agents for Game NPCs</title>
-<meta name="description" content="VoiceRT is an open-source AI voice agent system built first for game NPCs: design a character once, drop it onto any Unity or Unreal NPC, and talk to it in the game's own audio. Interruptible mid-sentence, with an enforced cost ceiling per player.">
-<meta property="og:title" content="VoiceRT — AI Voice Agents for Game NPCs">
-<meta property="og:description" content="A living NPC from a character sheet: real-time, interruptible, engine-native audio, cost-capped. Python asyncio · Unity / Unreal · FMOD / Wwise">
+<title>VoiceRT — AI voice agents for game NPCs · Unity + FMOD</title>
+<meta name="description" content="Interruptible voice NPCs for Unity. One character asset, streamed into the game's own mix. The FMOD programmer-instrument sink is milestone M1. Working prototype, MIT.">
+<meta property="og:title" content="VoiceRT — AI voice agents for game NPCs · Unity + FMOD">
+<meta property="og:description" content="Interruptible voice NPCs for Unity. One character asset, streamed into the game's own mix. The FMOD programmer-instrument sink is milestone M1. Working prototype, MIT.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-voice-agent-demo-rose.vercel.app/">
+<meta property="og:site_name" content="VoiceRT">
+<meta property="og:image" content="https://ai-voice-agent-demo-rose.vercel.app/media/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -20,13 +26,12 @@
   <div class="nav-inner">
     <a class="logo" href="#top">Voice<span>RT</span></a>
     <nav>
-      <a href="#arch">Architecture</a>
-      <a href="#live">Runtime</a>
-      <a href="#sound">Audio Chain</a>
-      <a href="#models">Models</a>
-      <a href="#apps">Use Cases</a>
-      <a href="#games">For Game Devs</a>
-      <a href="#vision">Vision</a>
+      <a href="#live">How it works</a>
+      <a href="#wiring">FMOD wiring</a>
+      <a href="#games">Cost</a>
+      <a href="#demo">Demo</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo#readme" target="_blank" rel="noopener">Docs</a>
       <a class="gh" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" target="_blank" rel="noopener">GitHub ↗</a>
     </nav>
   </div>
@@ -38,44 +43,108 @@
   <section class="hero">
     <canvas id="wave" aria-hidden="true"></canvas>
     <div class="hero-inner">
-      <p class="kicker">AI voice agent system · built first for game NPCs · open source</p>
-      <h1>AI voice agents<br>built for <em>game NPCs</em></h1>
+      <p class="kicker">Unity + FMOD first · working prototype · open source · MIT · AltaLab Fall 2026</p>
+      <h1>Talk to <em>any NPC</em>.</h1>
+      <p class="deck">An interruptible voice NPC for Unity, built to sit inside your FMOD mix. No recording budget.</p>
       <p class="sub">
-        An AI voice agent system for specific jobs — and the main one is the NPC. Design a
-        character once, drop it onto any Unity or Unreal NPC, and talk to it inside the game's
-        own audio. It answers in character and you can interrupt it mid-sentence. Same core,
-        two more profiles: sales calls and a personal assistant. Pipecat, LiveKit Agents and
-        Rapida were studied as references; every design decision here is original.
+        We help Unity game developers give NPCs real, interruptible voice conversations without a
+        recording budget, through one FMOD-native character asset, so players can talk to any NPC
+        and get an in-character answer inside the game's own mix.
+      </p>
+      <p class="sub status">
+        The Unity package streams into a plain <span class="mono">AudioSource</span> today; the FMOD
+        programmer-instrument sink is milestone M1.
       </p>
       <div class="chips">
-        <span class="chip"><b data-count="300" data-prefix="&lt;" data-suffix="&nbsp;ms">&lt;300&nbsp;ms</b> NPC audio deadline</span>
-        <span class="chip"><b>AltaLab</b> accelerator · Fall 2026 cohort</span>
-        <span class="chip"><b data-count="121" data-suffix="/121">121/121</b> tests · mypy strict</span>
-        <span class="chip"><b data-count="50" data-suffix="&nbsp;ms">50&nbsp;ms</b> to first audio on stubs</span>
-        <span class="chip"><b>0</b> core dependencies</span>
+        <span class="chip"><b>0 ms</b> interrupt gate</span>
+        <span class="chip">pool capped at <b>7 agents</b> for 240 NPCs</span>
+        <span class="chip">synthesis off the render thread · <b>16.6 ms</b> at 60 fps</span>
+        <span class="chip"><b>$0.00015</b> / turn · cloud brain, local voice</span>
+        <span class="chip"><b>MIT</b></span>
       </div>
       <div class="cta">
-        <a class="btn primary" href="#games">See the NPC solution</a>
-        <a class="btn" href="#arch">Explore the architecture</a>
+        <a class="btn primary" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo#quick-start-unity--fmod" target="_blank" rel="noopener">Install the Unity package</a>
+        <a class="btn" href="#live">How it works</a>
         <a class="btn" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" target="_blank" rel="noopener">Source on GitHub</a>
       </div>
     </div>
   </section>
 
-  <!-- ============ ARCHITECTURE ============ -->
-  <section id="arch" class="section">
-    <h2>Voice Agent Architecture</h2>
-    <p class="lead">One pipeline, three modes. Switch the profile and watch the active path change.</p>
-
-    <div class="mode-switch" role="group" aria-label="Agent mode selector">
-      <span class="mode-label" id="mode-switch-label">Agent mode</span>
-      <button class="mode-arrow" id="mode-prev" aria-label="Previous mode">‹</button>
-      <div class="mode-name mono" id="mode-name" role="status" aria-live="polite">Assistant</div>
-      <button class="mode-arrow" id="mode-next" aria-label="Next mode">›</button>
+  <!-- ============ TRY IT ============ -->
+  <section id="try" class="section alt">
+    <h2>Try it</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>In Unity</h3>
+        <pre class="cmd">Window &gt; Package Manager &gt; + &gt; Add package from git URL
+https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo.git?path=/integrations/unity/com.voicert.npc
+Add Component &gt; VoiceRT &gt; VoiceRT NPC
+python -m voicert.game.bridge 127.0.0.1 8765
+# then press Play</pre>
+      </div>
+      <div class="card">
+        <h3>Without an engine</h3>
+        <pre class="cmd">pip install -e ".[dev]"
+python examples/run_demo.py npc   # one turn, a barge-in, then the NPC carries on
+pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
+      </div>
     </div>
+    <p class="note">
+      Streams into a plain <span class="mono">AudioSource</span> today.
+      The FMOD programmer-instrument sink is milestone M1. Not compiled inside an Editor yet.
+    </p>
+  </section>
+
+  <!-- ============ WHY NPCS ============ -->
+  <section id="why" class="section">
+    <h2>Why NPCs</h2>
+    <p class="lead">
+      Design the character once: who it is, what it knows, what it never says. It ships as one asset
+      dropped onto a Unity NPC, and the player talks to it inside the game's own mix.
+    </p>
+    <div class="grid3">
+      <div class="card">
+        <h3>Recording does not scale</h3>
+        <p>The SAG-AFTRA floor is $1,134.95 for a 4-hour day covering up to three voices, before
+        studio, direction and retakes. Skyrim shipped around 60,000 lines; Starfield was announced at
+        over 250,000. Nobody records an open world twice.</p>
+      </div>
+      <div class="card">
+        <h3>An AI voice has to be an ordinary voice</h3>
+        <p>Same FMOD buses, attenuation curves, occlusion, reverb sends and ducking the sound designer
+        already built. Anything else means a second mix, and that is where AI dialogue starts to
+        sound pasted on.</p>
+      </div>
+      <div class="card">
+        <h3>Cost per player is a budget, not a hope</h3>
+        <p>The runtime enforces a spending ceiling the same way it enforces latency. Out of budget
+        means an authored line, never an error dialog.</p>
+      </div>
+    </div>
+    <p class="note">
+      This already ships. PUBG's Ally Duo runs a quantized 2B Mistral-NeMo-Minitron on the player's
+      GPU; inZOI's Smart Zoi runs a 0.5B Minitron. VoiceRT uses the same split: reflexes never wait
+      for the model.
+    </p>
+    <p class="note">
+      The character stays inside the game's lore, and the guardrail is structural: the NPC has no
+      tools outside the game engine to reach for. The whole argument with numbers:
+      <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/economics.md" target="_blank" rel="noopener">docs/economics.md</a>.
+    </p>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section id="live" class="section alt">
+    <h2>How it works</h2>
+    <p class="lead">
+      Everything heavy (VAD, STT, the LLM, TTS, the voice pool, the ledger) stays in the Python
+      process. The engine gets a few hundred lines of C#: one socket per live NPC, PCM queued into
+      an ordinary engine sound, text and tool calls forwarded to your MonoBehaviour. The engine never
+      runs a model.
+    </p>
 
     <div class="diagram-wrap">
-      <svg id="diagram" viewBox="0 0 860 560" role="img" aria-label="Voice agent architecture diagram: transport, VAD, STT, context and state, LLM, then TTS, CRM, or game engine depending on the active mode">
+      <svg id="diagram" viewBox="0 0 920 590" role="img" aria-label="NPC voice pipeline. Unity process: the player's mic sends PCM16 16 kHz to the VoiceRT NPC component; the Dialogue LOD connects it only in the LIVE tier; the NPC holds one TCP socket to the voicert process. voicert process in Python: VAD, STT, a lore-locked LLM with engine-only tools, TTS to PCM16, plus a voice pool and cost ledger. TTS audio returns as AUDIO_OUT into an FMOD programmer instrument and then the game mix; the LLM returns text and tool calls for subtitles and gestures; on barge-in the VAD cancels everything and sends FLUSH to the FMOD event.">
         <defs>
           <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#3d4657"/>
@@ -85,58 +154,93 @@
           </marker>
         </defs>
 
+        <!-- process groups -->
+        <rect class="group" x="20" y="20" width="420" height="550" rx="12"/>
+        <text class="group-label" x="40" y="48">Unity process</text>
+        <rect class="group" x="480" y="20" width="420" height="550" rx="12"/>
+        <text class="group-label" x="500" y="48">voicert process (Python)</text>
+
         <!-- edges -->
-        <path class="edge" id="e-t-vad"  d="M430,86 V120"/>
-        <path class="edge" id="e-vad-stt" d="M430,166 V200"/>
-        <path class="edge" id="e-stt-ctx" d="M430,246 V280"/>
-        <path class="edge" id="e-ctx-llm" d="M400,326 C380,350 355,356 335,368"/>
-        <path class="edge dashed" id="e-ctx-mem" d="M470,326 C500,350 540,356 565,368"/>
-        <path class="edge" id="e-llm-tts" d="M255,414 C220,440 190,446 168,458"/>
-        <path class="edge dashed" id="e-llm-crm" d="M310,414 V458"/>
-        <path class="edge dashed" id="e-llm-game" d="M370,414 C430,442 480,448 520,458"/>
-        <path class="edge dashed" id="e-mem-game" d="M610,414 C600,432 590,442 580,458"/>
+        <path class="edge" d="M125,126 C125,150 190,150 190,170"/>
+        <text class="edge-label" x="30" y="154">PCM16 16 kHz</text>
+        <path class="edge" d="M335,126 C335,150 270,150 270,170"/>
+        <text class="edge-label" x="430" y="154" text-anchor="end">connect only if LIVE</text>
 
-        <!-- barge-in feedback loop -->
-        <path class="edge barge" id="e-barge" d="M112,458 C60,380 60,220 150,143 C220,84 330,120 384,140" marker-end="url(#arr-hot)"/>
-        <text class="barge-label mono" x="34" y="300" transform="rotate(-90 34 300)">barge-in · InterruptionFrame</text>
+        <path class="edge hot thick" d="M330,198 H560"/>
+        <text class="edge-label" x="445" y="188" text-anchor="middle">TCP · one socket per live NPC</text>
 
-        <!-- nodes -->
-        <g class="node" id="n-transport"><rect x="330" y="40" width="200" height="46" rx="6"/><text x="430" y="68">Transport (SIP/WebRTC)</text></g>
-        <g class="node" id="n-vad"><rect x="330" y="120" width="200" height="46" rx="6"/><text x="430" y="148">VAD (Voice Activity Detection)</text></g>
-        <g class="node" id="n-stt"><rect x="340" y="200" width="180" height="46" rx="6"/><text x="430" y="228">STT (Speech to Text)</text></g>
-        <g class="node" id="n-ctx"><rect x="325" y="280" width="210" height="46" rx="6"/><text x="430" y="308">Context &amp; State</text></g>
-        <g class="node" id="n-llm"><rect x="205" y="368" width="230" height="46" rx="6"/><text x="320" y="396">LLM (Reasoning &amp; Tools)</text></g>
-        <g class="node" id="n-mem"><rect x="510" y="368" width="215" height="46" rx="6"/><text x="617" y="396">Memory &amp; IoT (Assistant)</text></g>
-        <g class="node" id="n-tts"><rect x="55" y="458" width="165" height="46" rx="6"/><text x="137" y="486">TTS (Text to Speech)</text></g>
-        <g class="node" id="n-crm"><rect x="243" y="458" width="150" height="46" rx="6"/><text x="318" y="486">CRM &amp; SIP (Sales)</text></g>
-        <g class="node" id="n-game"><rect x="428" y="458" width="280" height="46" rx="6"/><text x="568" y="486">Game Engine &amp; Guardrails (NPC)</text></g>
+        <path class="edge hot" d="M680,226 V254"/>
+        <path class="edge hot" d="M680,310 V338"/>
+        <path class="edge hot" d="M680,394 V422"/>
+
+        <path class="edge hot" d="M560,462 H330"/>
+        <text class="edge-label" x="445" y="452" text-anchor="middle">AUDIO_OUT</text>
+        <path class="edge hot" d="M230,478 V500"/>
+
+        <path class="edge" d="M560,366 C460,366 300,350 300,226"/>
+        <text class="edge-label" x="288" y="300" text-anchor="end">TEXT_OUT · TOOL</text>
+        <text class="edge-label" x="288" y="316" text-anchor="end">→ subtitles, gestures</text>
+
+        <!-- barge-in loop -->
+        <path class="edge barge" d="M560,214 H516 Q500,214 500,230 V418 Q500,434 484,434 H330" marker-end="url(#arr-hot)"/>
+        <text class="barge-label mono" x="490" y="324" text-anchor="middle" transform="rotate(-90 490 324)">barge-in: cancel + FLUSH</text>
+
+        <!-- Unity nodes -->
+        <g class="node"><rect x="30" y="70" width="190" height="56" rx="6"/><text x="125" y="92">Player mic</text><text class="n-sub" x="125" y="112">VoiceRT Microphone</text></g>
+        <g class="node"><rect x="240" y="70" width="190" height="56" rx="6"/><text x="335" y="92">Dialogue LOD</text><text class="n-sub" x="335" y="112">LIVE · BARK · CROWD · OFF</text></g>
+        <g class="node active"><rect x="130" y="170" width="200" height="56" rx="6"/><text x="230" y="192">VoiceRT NPC</text><text class="n-sub" x="230" y="212">MonoBehaviour</text></g>
+        <g class="node"><rect x="130" y="422" width="200" height="56" rx="6"/><text x="230" y="444">FMOD event</text><text class="n-sub" x="230" y="464">programmer instrument</text></g>
+        <g class="node"><rect x="110" y="500" width="240" height="56" rx="6"/><text x="230" y="522">Game mix</text><text class="n-sub" x="230" y="542">3D · occlusion · ducking · buses</text></g>
+
+        <!-- voicert nodes -->
+        <g class="node"><rect x="560" y="170" width="240" height="56" rx="6"/><text x="680" y="192">VAD</text><text class="n-sub" x="680" y="212">Silero · barge-in starts here</text></g>
+        <g class="node"><rect x="560" y="254" width="240" height="56" rx="6"/><text x="680" y="276">STT</text><text class="n-sub" x="680" y="296">speech to text, streamed</text></g>
+        <g class="node"><rect x="560" y="338" width="240" height="56" rx="6"/><text x="680" y="360">LLM · lore-locked</text><text class="n-sub" x="680" y="380">tools: engine only</text></g>
+        <g class="node"><rect x="560" y="422" width="240" height="56" rx="6"/><text x="680" y="444">TTS</text><text class="n-sub" x="680" y="464">→ PCM16 chunks</text></g>
+        <g class="node"><rect x="560" y="500" width="320" height="56" rx="6"/><text x="720" y="522">Voice pool · cost ledger</text><text class="n-sub" x="720" y="542">caps agents and $ per player</text></g>
       </svg>
-
-      <div class="active-pipeline">
-        <span class="ap-label mono">ACTIVE PIPELINE</span>
-        <span class="ap-name" id="ap-name">Jarvis Engine</span>
+      <div class="diagram-linear-wrap">
+        <ol class="diagram-linear" aria-label="NPC voice pipeline, in order">
+          <li>Player mic, PCM16 16 kHz</li>
+          <li>Dialogue LOD opens the socket only for a LIVE NPC</li>
+          <li>VAD, barge-in starts here</li>
+          <li>STT</li>
+          <li>LLM, lore-locked, engine-only tools</li>
+          <li>TTS to PCM16</li>
+          <li>FMOD programmer instrument</li>
+          <li>Game mix: 3D, occlusion, ducking, buses</li>
+        </ol>
+        <p class="diagram-linear-note mono">Barge-in cancels everything in flight and sends FLUSH.</p>
       </div>
+      <p class="diagram-note">Unreal + Wwise is the same picture with <span class="mono">UAkAudioInputComponent</span> in the FMOD slot.</p>
     </div>
 
-    <div class="mode-details" id="mode-details" aria-live="polite">
-      <!-- filled by app.js -->
+    <h3 class="sub-head">The NPC contract</h3>
+    <div class="npc-contract">
+      <table>
+        <tbody>
+          <tr><th>Transport</th><td>engine bridge: one TCP socket per live NPC, PCM16 16 kHz in both directions</td></tr>
+          <tr><th>System prompt</th><td>strict lore rules. The character knows nothing of the real world, speaks in one or two sentences, and answers attempts to break character in character</td></tr>
+          <tr><th>Tools</th><td><span class="mono">emit_game_event · query_world_state · play_animation</span>. Engine only, and the isolation is structural</td></tr>
+          <tr><th>Barge-in gate</th><td>0 ms. Cuts instantly, because game feel beats politeness</td></tr>
+          <tr><th>Interrupted reply</th><td>dropped: cleaner lore, shorter prompt, lower latency</td></tr>
+          <tr><th>Latency budget</th><td>from end of player speech: first LLM token ≤ 150 ms · first audio ≤ 300 ms</td></tr>
+        </tbody>
+      </table>
     </div>
-  </section>
 
-  <!-- ============ RUNTIME WALKTHROUGH (live sim) ============ -->
-  <section id="live" class="section alt">
-    <h2>How it works in real time</h2>
-    <p class="lead">
-      A scripted run of the real loop, with the same stages and the same metrics that
-      <span class="mono">voicert.metrics</span> writes to the logs. Interruption included.
+    <h3 class="sub-head">One turn, one barge-in</h3>
+    <p class="lead narrow">
+      A scripted run of the real loop with illustrative timings: the same stages and the same metric
+      names that <span class="mono">voicert.metrics</span> writes to the logs. Interruption included.
     </p>
-    <div class="sim">
+    <div class="sim" id="demo">
       <div class="sim-head">
         <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-        <span class="sim-title mono">voicert · session — profile <span id="sim-profile">assistant</span></span>
-        <button class="btn small" id="sim-play">▶ Run session</button>
+        <span class="sim-title mono">voicert · session — profile <span>npc</span></span>
+        <button class="btn small" id="sim-play">See a turn, with a barge-in</button>
       </div>
-      <pre class="sim-body mono" id="sim-body" aria-live="polite">press "Run session"...</pre>
+      <pre class="sim-body mono" id="sim-body" aria-live="polite">one turn, a barge-in, then the NPC carries on. Press the button.</pre>
     </div>
     <div class="grid3 explain">
       <div class="card">
@@ -147,18 +251,90 @@
         so changing a provider never touches the core.</p>
       </div>
       <div class="card">
-        <h3>2 · What happens when you interrupt</h3>
-        <p>The local VAD hears you, running <span class="mono">asyncio</span> tasks are cancelled, the
-        queues are drained, and the transport flushes playback. The history then keeps only the part
-        that was <b>actually spoken aloud</b>, so the agent never remembers words you never heard.</p>
+        <h3>2 · What happens when the player interrupts</h3>
+        <p>The VAD hears the player, and everything in flight is cancelled at its next await point:
+        LLM generation, TTS synthesis, the queues in between, and a <span class="mono">FLUSH</span> to
+        the engine so nothing produced before the cut plays after it. The history keeps only the
+        characters that were <b>actually voiced</b>, so the NPC never remembers words the player
+        never heard.</p>
       </div>
       <div class="card">
-        <h3>3 · A profile is a contract</h3>
-        <p>Sales, assistant and NPC differ in structure, not wording. Each has its own set of tools
-        that does not overlap with the others, so an NPC cannot reach the CRM even under prompt
-        injection. Each also has its own latency budget, VAD sensitivity and context policy.</p>
+        <h3>3 · The tool set is closed</h3>
+        <p><span class="mono">emit_game_event</span>, <span class="mono">query_world_state</span>,
+        <span class="mono">play_animation</span> and nothing else. A prompt injection asking for a tool
+        outside the engine hits <span class="mono">PermissionError</span>: there is nothing outside the
+        game to reach. The 0 ms gate, the VAD sensitivity and the drop-on-interrupt context policy are
+        part of the same contract.</p>
       </div>
     </div>
+    <p class="note">
+      Right now the pipeline runs on deterministic stubs, so the tests and the demo need no API keys:
+      50 ms to first audio on stubs, and 121 tests pass through the same interfaces a real local or
+      cloud model would use, so switching to a real model is an adapter, not a rebuild. Internals:
+      <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/architecture.md" target="_blank" rel="noopener">docs/architecture.md</a>.
+    </p>
+  </section>
+
+  <!-- ============ WIRING ============ -->
+  <section id="wiring" class="section">
+    <h2>Wiring into FMOD</h2>
+    <p class="lead">
+      The rule is simple: <b>an AI voice has to be an ordinary voice</b>. Same buses, attenuation,
+      occlusion, reverb sends, ducking and voice limiting the sound designer already set up. Anything
+      else means keeping a second mix alive, and that is where AI dialogue starts to sound pasted on.
+    </p>
+    <div class="grid3">
+      <div class="card engine">
+        <div class="engine-tag mono">UNITY + FMOD</div>
+        <p>Use a user-created sound. Call <span class="mono">createSound</span> with
+        <span class="mono">FMOD_OPENUSER</span> and an <span class="mono">FMOD_CREATESOUNDEXINFO</span>
+        (defaultfrequency, numchannels, format, <span class="mono">pcmreadcallback</span>). FMOD then
+        pulls PCM in <span class="mono">decodebuffersize</span> blocks.</p>
+        <ul class="facts mono">
+          <li>pass it to a <b>programmer instrument</b> via CREATE_PROGRAMMER_SOUND, release on DESTROY</li>
+          <li>it inherits the event's 3D panning, buses and effects</li>
+          <li>concurrency is already handled: maxchannels 256–1024 virtual · softwareChannels 64 real</li>
+          <li>status: contract defined in voicert.game.sinks; the FMOD programmer-instrument sink is milestone M1</li>
+        </ul>
+      </div>
+      <div class="card engine">
+        <div class="engine-tag mono">UNITY · PLAIN AUDIOSOURCE</div>
+        <p>No middleware? The package streams into an ordinary <span class="mono">AudioSource</span>
+        through <span class="mono">OnAudioFilterRead</span> or <span class="mono">PCMReaderCallback</span>.
+        The sink contract is two methods, <span class="mono">push(pcm, sample_rate)</span> and
+        <span class="mono">flush()</span>, so the native shim is straightforward. <b>flush() is the
+        barge-in path</b> and has to drop queued audio immediately, or the NPC carries on talking after
+        the player cut them off.</p>
+        <ul class="facts mono">
+          <li>Add Component &gt; VoiceRT &gt; VoiceRT NPC; it requires an AudioSource, so Unity adds one</li>
+          <li>VoiceRT Dialogue LOD opens and closes the socket as the player crosses the LIVE distance</li>
+          <li>status: wire protocol and PCM ring buffer verified against a live bridge from C# (13 xUnit tests, including a full turn plus a barge-in over a real socket); not compiled inside an Editor yet</li>
+        </ul>
+      </div>
+      <div class="card engine">
+        <div class="engine-tag mono">UNREAL + WWISE</div>
+        <p>Use the stock <b>Audio Input source plug-in</b>. Register three global callbacks once with
+        <span class="mono">SetAudioInputCallbacks()</span>. The engine calls the format callback when
+        playback starts, then the execute callback on every audio frame until you stop it or return
+        <span class="mono">AK_NoMoreData</span>. Without middleware, use
+        <span class="mono">USoundWaveProcedural::QueueAudio</span>.</p>
+        <ul class="facts mono">
+          <li>subclass <b>UAkAudioInputComponent</b>, override FillSamplesBuffer + GetChannelConfig</li>
+          <li>start it with <b>Post Associated Audio Input Event</b>; a plain PostEvent will not work</li>
+          <li>already proven: ReadSpeaker speechEngine, 4Players ODIN, Unreal AudioLink</li>
+          <li>status: protocol verified in standalone C++; Editor glue not exercised</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">
+      Both engine components are un-compiled against the real engines in this repo. What is verified:
+      the wire protocol and the PCM ring buffer, cross-checked against a live
+      <span class="mono">voicert.game.bridge</span> process from both C# and standalone C++. The
+      engine-specific glue follows each engine's documented API shape but has not been exercised
+      inside an Editor. Treat it as a working prototype to drop in and iterate on, not a
+      marketplace-ready asset yet. Wiring for both middlewares, FMOD first:
+      <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/middleware-wiring.md" target="_blank" rel="noopener">docs/middleware-wiring.md</a>.
+    </p>
   </section>
 
   <!-- ============ AUDIO CHAIN ============ -->
@@ -170,32 +346,33 @@
     </p>
 
     <div class="chain">
-      <div class="chain-title"><span class="io in">IN</span> Input chain · microphone/line → STT</div>
+      <div class="chain-title"><span class="io in">IN</span> Input chain · player mic → STT</div>
       <div class="chain-strip">
         <div class="fx"><b>HPF 80–120 Hz</b><span>cuts rumble, hum,<br>and proximity effect</span></div>
-        <div class="fx"><b>Denoise</b><span>RNNoise / Silero:<br>room noise, HVAC</span></div>
+        <div class="fx"><b>Denoise</b><span>RNNoise / Silero:<br>room noise, fans, HVAC</span></div>
         <div class="fx"><b>AGC</b><span>−18 dBFS target,<br>stable level into VAD</span></div>
-        <div class="fx"><b>Soft Limiter</b><span>−3 dBFS ceiling,<br>no clipping into the codec</span></div>
+        <div class="fx"><b>Soft Limiter</b><span>−3 dBFS ceiling,<br>no clipping downstream</span></div>
         <div class="fx"><b>Resample</b><span>16 kHz mono PCM —<br>the native STT format</span></div>
         <div class="fx hot"><b>VAD</b><span>Silero, on-device, &lt;1 ms —<br>barge-in starts here</span></div>
       </div>
     </div>
 
     <div class="chain">
-      <div class="chain-title"><span class="io out">OUT</span> Output chain · TTS → listener</div>
+      <div class="chain-title"><span class="io out">OUT</span> Before it hits the FMOD bus · TTS → programmer sound</div>
       <div class="chain-strip">
         <div class="fx"><b>TTS 24–48 kHz</b><span>chunked streaming,<br>first byte ≈ 75–90 ms</span></div>
         <div class="fx"><b>De-esser</b><span>synthesis hisses on sibilants —<br>soft compression at 5–8 kHz</span></div>
         <div class="fx"><b>Presence EQ</b><span>+1.5 dB @ 3–5 kHz:<br>intelligibility in noise</span></div>
-        <div class="fx"><b>Loudness</b><span>−16 LUFS (WebRTC) ·<br>−22 dBFS (telephony)</span></div>
-        <div class="fx"><b>Codec</b><span>Opus 48k (WebRTC) ·<br>μ-law 8k (SIP/Twilio)</span></div>
-        <div class="fx hot"><b>Flush</b><span>barge-in instantly clears<br>the jitter buffer</span></div>
+        <div class="fx"><b>Loudness</b><span>−16 LUFS<br>game dialogue bus</span></div>
+        <div class="fx"><b>Format</b><span>PCM16 16 kHz → FMOD programmer sound ·<br>Opus 48k only for remote transport</span></div>
+        <div class="fx hot"><b>Flush</b><span>queued PCM is dropped<br>on barge-in</span></div>
       </div>
     </div>
 
     <p class="note">
       The thresholds and levels here come from mixing work. They are values for real rooms and real
-      phone lines, not documentation defaults.
+      game mixes, not documentation defaults. Input DSP before STT, output DSP before the FMOD bus:
+      <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/audio-chain.md" target="_blank" rel="noopener">docs/audio-chain.md</a>.
     </p>
   </section>
 
@@ -211,91 +388,37 @@
       <div class="card model">
         <div class="model-tag stt">STT · speech to text</div>
         <ul>
-          <li><b>Deepgram Nova-3</b> — websocket streaming, ~150 ms interim results <em>primary</em></li>
-          <li><b>faster-whisper</b> — local GPU inference, offline fallback, no key required</li>
+          <li><b>Deepgram Nova-3</b> — websocket streaming, ~150 ms interim results <em>cloud</em></li>
+          <li><b>faster-whisper</b> — local GPU inference, no key required <em>local</em></li>
         </ul>
       </div>
       <div class="card model">
         <div class="model-tag llm">LLM · reasoning &amp; tools</div>
         <ul>
-          <li><b>Claude Haiku</b> — NPC: speed wins <em>primary for NPC</em></li>
-          <li><b>Claude Sonnet</b> — Sales/Assistant: reasoning quality</li>
+          <li><b>Claude Haiku</b> — speed wins <em>cloud</em></li>
+          <li><b>Ollama</b> — llama.cpp-class models on the player's machine <em>local</em></li>
           <li><b>OpenRouter</b> — any model behind one key, for experimentation</li>
         </ul>
       </div>
       <div class="card model">
         <div class="model-tag tts">TTS · text to speech</div>
         <ul>
-          <li><b>ElevenLabs Flash v2.5</b> — ≈75 ms TTFB <em>primary for NPC</em></li>
+          <li><b>ElevenLabs Flash v2.5</b> — ≈75 ms TTFB <em>cloud</em></li>
           <li><b>Cartesia Sonic</b> — stable prosody over long sessions</li>
+          <li><b>sherpa-onnx</b> — Piper / Kokoro voices, $0 per player (see licensing) <em>local</em></li>
         </ul>
       </div>
     </div>
-    <p class="note"><span class="mono">ConfigFactory</span> decides which model each profile gets: the fastest for NPC, the most accurate for sales.</p>
+    <p class="note"><span class="mono">ConfigFactory</span> gives the NPC the fastest model that still holds character.</p>
   </section>
 
-  <!-- ============ USE CASES ============ -->
-  <section id="apps" class="section">
-    <h2>Where it applies</h2>
-    <div class="grid3">
-      <article class="card app sales">
-        <div class="app-head"><span class="app-emoji">📞</span><h3>Sales Agent</h3></div>
-        <p>Inbound and outbound calls over SIP or Twilio. Follows a scripted conversation graph,
-        qualifies the lead, logs objections to the CRM, and holds the deal context for the whole call.</p>
-        <ul class="facts mono">
-          <li>transport: SIP / Twilio Media Streams</li>
-          <li>tools: crm_lookup · crm_update_deal · crm_log_objection · schedule_callback · transfer_to_human</li>
-          <li>interrupt gate 250 ms, so an "uh-huh" does not kill the pitch</li>
-          <li>interrupted reply is kept and marked: an interruption usually means an objection</li>
-        </ul>
-        <div class="budget"><span>First audio out</span><div class="bar"><i style="--w:100%"></i></div><b data-count="1000" data-suffix=" ms">1000 ms</b></div>
-      </article>
-
-      <article class="card app assistant">
-        <div class="app-head"><span class="app-emoji">🎧</span><h3>Personal Assistant</h3></div>
-        <p>Jarvis-style, for conferences, meetings and everyday tasks. It remembers its owner over
-        time, searches the web, handles the calendar, controls IoT devices and opens apps. All by
-        voice, over WebRTC, from any device.</p>
-        <ul class="facts mono">
-          <li>transport: WebRTC (Opus 48k)</li>
-          <li>tools: web_search · calendar_create · memory_store/recall · iot_command · os_open_app</li>
-          <li>interrupt gate 120 ms</li>
-          <li>anything irreversible needs a spoken confirmation first</li>
-        </ul>
-        <div class="budget"><span>First audio out</span><div class="bar"><i style="--w:80%"></i></div><b data-count="800" data-suffix=" ms">800 ms</b></div>
-      </article>
-
-      <article class="card app npc">
-        <div class="app-head"><span class="app-emoji">🎮</span><h3>In-Game NPC</h3></div>
-        <p>A character that stays inside the game's lore. The guardrail is structural: the NPC has no
-        tools outside the game engine to reach for. It reacts to in-game events over WebSocket or gRPC,
-        with gestures timed to speech.</p>
-        <ul class="facts mono">
-          <li>transport: WebRTC + WebSocket/gRPC to the engine</li>
-          <li>tools: emit_game_event · query_world_state · play_animation, and nothing else</li>
-          <li>interrupt gate 0 ms, because game feel comes first</li>
-          <li>interrupted reply is dropped: cleaner lore, shorter prompt</li>
-        </ul>
-        <div class="budget"><span>First audio out</span><div class="bar"><i style="--w:30%"></i></div><b data-count="300" data-suffix=" ms">300 ms</b></div>
-      </article>
-    </div>
-  </section>
-
-  <!-- ============ GAME DEVELOPERS ============ -->
+  <!-- ============ COST ============ -->
   <section id="games" class="section">
     <h2>Voicing an open world: what it costs</h2>
     <p class="lead">
       Two questions come first for any game developer. <b>What does it cost to run, and does it pay
-      for itself?</b> Both have numbers below, and the <span class="mono">voicert.game</span> module
-      implements the answer.
-    </p>
-    <p class="lead narrow">
-      NPCs are the focus. VoiceRT was selected for <b>AltaLab</b>, the accelerator run by the
-      AltaIR Capital fund; the Fall 2026 cohort is where this gets built with their support. The
-      goal is one complete solution: design a character once, package it as a single engine asset
-      with its voice and boundaries, drop it onto any NPC in Unity or Unreal, and talk to it. The
-      audio side is built with 14+ years of technical sound design and FMOD across PC, console
-      and mobile.
+      for itself?</b> Both have numbers below, and the <span class="mono">voicert.game</span> and
+      <span class="mono">voicert.economics</span> modules implement the answer.
     </p>
 
     <div class="stat-row">
@@ -313,6 +436,34 @@
         <b>$0</b>
         <span>what one extra line costs when it is synthesized on the player's device.
         The cost does not grow with units sold.</span>
+      </div>
+    </div>
+
+    <h3 class="sub-head">One turn, priced from measured usage</h3>
+    <p class="lead narrow">
+      <span class="mono">voicert.economics</span> prices a turn from measured usage against rate cards
+      read from the vendors on 2026-08-31 (<span class="mono">python tools/unit_economics.py</span>).
+      The turn: 282 fresh + 700 cached prompt tokens, 23 output tokens, 92 characters synthesized,
+      3 s of player audio.
+    </p>
+    <div class="cost-grid">
+      <div class="cost-row hyb-head mono">
+        <span>stack</span><span>per turn</span><span>TTS share</span><span>$15 buys</span>
+      </div>
+      <div class="cost-row">
+        <span><b>all cloud, cheap</b></span><span class="mono">$0.001532</span><span>90.1%</span><span>9,792 turns</span>
+      </div>
+      <div class="cost-row">
+        <span><b>all cloud, premium</b></span><span class="mono">$0.005307</span><span>86.7%</span><span>2,826 turns</span>
+      </div>
+      <div class="cost-row accent">
+        <span><b>cloud brain, local voice</b></span><span class="mono">$0.000152</span><span>0%</span><span>98,814 turns</span>
+      </div>
+      <div class="cost-row">
+        <span><b>premium brain, local voice</b></span><span class="mono">$0.000707</span><span>0%</span><span>21,216 turns</span>
+      </div>
+      <div class="cost-row">
+        <span><b>fully on-device</b></span><span class="mono">$0.000000</span><span>0%</span><span>unbounded</span>
       </div>
     </div>
 
@@ -358,21 +509,23 @@
 </pre>
     </div>
     <p class="note">
-      Live agents come out of a fixed-size pool, and when it is full the lowest-priority one is
-      dropped. Wwise and FMOD already limit voices the same way. A quest-giver outranks an ambient
-      vendor, and anything dropped falls back to the bark tier instead of going silent. 240 NPCs in
-      the world, never more than 7 agents in memory.
+      <span class="mono">live=</span> is how many NPCs qualify for the LIVE tier; <span class="mono">agents held:</span>
+      is how many got a pool slot. Live agents come out of a fixed-size pool, and when it is full the
+      lowest-priority one is dropped. FMOD and Wwise already limit voices the same way. A quest-giver
+      outranks an ambient vendor, and anything dropped falls back to the bark tier instead of going
+      silent. 240 NPCs in the world, never more than 7 agents in memory.
     </p>
 
     <h3 class="sub-head">It stays out of the frame budget</h3>
     <div class="grid3">
       <div class="card">
-        <h3>16.6 ms stays untouched</h3>
-        <p>Synthesis runs off the render thread, so what limits you is <b>a fraction of one CPU core</b>,
-        not frame time. The measure is the real-time factor: seconds of CPU per second of audio, so
-        below 1.0 is faster than real time. On a <b>Raspberry Pi 4</b>, Piper voices measured
-        RTF 0.77–0.81 on one thread and 0.35 on four. If a Pi can synthesize faster than real time, a gaming PC is not the
-        bottleneck. Supertonic reports RTF 0.012–0.015 on an M4 Pro CPU.</p>
+        <h3>16.6 ms stays untouched, by design</h3>
+        <p>Synthesis runs off the render thread, so the 16.6 ms frame at 60 fps is untouched by design
+        and what limits you is <b>a fraction of one CPU core</b>, not frame time. The measure is the
+        real-time factor: seconds of CPU per second of audio, so below 1.0 is faster than real time.
+        On a <b>Raspberry Pi 4</b>, Piper voices measured RTF 0.77–0.81 on one thread and 0.35 on
+        four. If a Pi can synthesize faster than real time, a gaming PC is not the bottleneck.
+        Supertonic reports RTF 0.012–0.015 on an M4 Pro CPU.</p>
       </div>
       <div class="card">
         <h3>Pool size is calculated, not guessed</h3>
@@ -416,119 +569,23 @@
       Baking is the default for a reason. Cloud TTS costs <b>$4–$30 per 1M characters</b>
       (Google Standard $4 / Neural2 $16 / Chirp 3 HD $30; Polly Standard $4 / Neural $16 /
       Generative $30), so a 10,000-line bank is a rounding error and re-baking it after a script
-      change costs nothing. On phones the local path already works: <b>Gemma 3 1B is 529 MB at
+      change costs nothing. On phones the local LLM path already works: <b>Gemma 3 1B is 529 MB at
       int4 QAT</b> (about 2,585 tok/s prefill on a Galaxy S24 Ultra), and Apple's roughly 3B
-      on-device model runs at about 30 tok/s on an iPhone 15 Pro, free to developers.
+      on-device model runs at about 30 tok/s on an iPhone 15 Pro, free to developers. Local TTS on
+      a phone is the open question below.
     </p>
 
-    <h3 class="sub-head">Wiring into Wwise and FMOD</h3>
+    <h3 class="sub-head">Local TTS is the lever</h3>
     <p class="lead narrow">
-      The rule is simple: <b>an AI voice has to be an ordinary voice</b>. Same buses, attenuation,
-      occlusion, reverb sends, ducking and voice limiting the sound designer already set up. Anything
-      else means keeping a second mix alive, and that is where AI dialogue starts to sound pasted on.
+      Speech synthesis is about 90% of a cloud voice turn; the language model is under 2%. Swapping
+      to a cheaper LLM optimizes a rounding error. Local TTS is the 10× lever, and it is tractable
+      where a local LLM is not: a Piper-class voice is ~60 MB of CPU-only inference. At $10 net per
+      player and a 90% margin target, all-cloud funds <b>652</b> turns; moving only synthesis
+      on-device funds <b>6,587</b>.
     </p>
     <div class="grid2">
-      <div class="card engine">
-        <div class="engine-tag mono">WWISE</div>
-        <p>Use the stock <b>Audio Input source plug-in</b>. Register three global callbacks once with
-        <span class="mono">SetAudioInputCallbacks()</span>. The engine calls the format callback when
-        playback starts, then the execute callback on every audio frame until you stop it or return
-        <span class="mono">AK_NoMoreData</span>.</p>
-        <ul class="facts mono">
-          <li>Unreal: subclass <b>UAkAudioInputComponent</b>, override FillSamplesBuffer + GetChannelConfig</li>
-          <li>start it with <b>Post Associated Audio Input Event</b>; a plain PostEvent will not work</li>
-          <li>already proven: ReadSpeaker speechEngine, 4Players ODIN, Unreal AudioLink</li>
-        </ul>
-      </div>
-      <div class="card engine">
-        <div class="engine-tag mono">FMOD</div>
-        <p>Use a user-created sound. Call <span class="mono">createSound</span> with
-        <span class="mono">FMOD_OPENUSER</span> and an <span class="mono">FMOD_CREATESOUNDEXINFO</span>
-        (defaultfrequency, numchannels, format, <span class="mono">pcmreadcallback</span>). FMOD then
-        pulls PCM in <span class="mono">decodebuffersize</span> blocks.</p>
-        <ul class="facts mono">
-          <li>pass it to a <b>programmer instrument</b> via CREATE_PROGRAMMER_SOUND, release on DESTROY</li>
-          <li>it inherits the event's 3D panning, buses and effects</li>
-          <li>concurrency is already handled: maxchannels 256–1024 virtual · softwareChannels 64 real</li>
-        </ul>
-      </div>
-    </div>
-    <p class="note">
-      No middleware? Use Unity's <span class="mono">OnAudioFilterRead</span> or
-      <span class="mono">PCMReaderCallback</span>, or Unreal's
-      <span class="mono">USoundWaveProcedural::QueueAudio</span>. The sink contract here is two
-      methods, <span class="mono">push(pcm, sample_rate)</span> and
-      <span class="mono">flush()</span>, so the native shim is straightforward. <b>flush() is the
-      barge-in path</b> and has to drop queued audio immediately, or the NPC carries on talking after
-      the player cut them off.
-    </p>
-
-    <div class="warn-box">
-      <div class="warn-head mono">LICENSING WILL BITE YOU BEFORE PERFORMANCE DOES</div>
-      <ul>
-        <li><b>Piper</b> now lives at <span class="mono">piper1-gpl</span> and is <b>GPL-3.0</b>. The MIT
-        <span class="mono">rhasspy/piper</span> was archived read-only on 2025-10-06. Piper embeds
-        espeak-ng, which is GPL, so linking against it makes your binary a derived work that has to
-        ship under GPL-3.0 as well. Dynamic linking does not avoid that, and pinning the old MIT code
-        does not help either: its CMake still links GPL espeak-ng.
-        <br><br>
-        Two routes work. Run Piper as a separate process, though you still ship a GPL binary alongside
-        your game, so talk to a lawyer, and GPLv3 Installation Information is a real problem on locked
-        consoles. Or use an MIT fork with an espeak-free G2P, such as
-        <span class="mono">ayutaz/piper-plus</span>.</li>
-        <li><b>Voice models are licensed separately from the engine.</b>
-        <span class="mono">en_US-lessac</span>, the voice in Piper's own examples, is under the
-        restrictive Blizzard 2013 license. Read the MODEL_CARD of every voice you ship.</li>
-        <li><b>Kokoro-82M is Apache-2.0, weights included</b> (8 languages, 54 voices, 86–326 MB of ONNX).
-        Clean licensing, but it measured <b>RTF 2.77–6.63 on a Raspberry Pi 4</b>, so it is not real time
-        on low-power ARM. Fine on desktop; benchmark it before committing a handheld target.</li>
-        <li><b>sherpa-onnx</b> (Apache-2.0) is the easiest runtime to ship: Windows, Linux, macOS, Android
-        and iOS, on x86, ARM and RISC-V, 12 bindings, no network needed. It still pulls in GPL espeak-ng
-        through piper-phonemize, though there is an open upstream issue to remove it.</li>
-      </ul>
-      <p>None of this stops you shipping. It means choosing the stack with a lawyer in the room. And
-      because every provider sits behind the same adapter interface, changing that choice later is a
-      swap rather than a rewrite.</p>
-    </div>
-  </section>
-
-  <!-- ============ VISION ============ -->
-  <section id="vision" class="section alt">
-    <h2>Where this is going</h2>
-    <p class="lead">
-      The pipeline does not know which vendor is behind a stage. Any cloud stage can be swapped for
-      an on-device one through the same adapter interface of about 50 lines, and the core has no
-      dependencies to get in the way.
-    </p>
-    <div class="grid3">
-      <article class="card app npc">
-        <div class="app-head"><span class="app-emoji">🎮</span><h3>NPC character asset (cohort focus)</h3></div>
-        <p>The game's audio middleware becomes the transport. <b>Wwise or FMOD sends the player's voice
-        into VoiceRT, and the NPC answers through the game's own audio bus</b>, in character and inside
-        the lore, with no dialogue trees and no scripted lines. The AltaLab Fall 2026 cohort goal:
-        ship this as one asset a studio drops onto a character.</p>
-        <ul class="facts mono">
-          <li>design once: who it is, what it knows, what it never says</li>
-          <li>one asset: persona + voice + boundaries, dropped onto Unity / Unreal NPCs</li>
-          <li>0 ms interrupt gate, so a player can talk over an NPC and it reacts like a person</li>
-        </ul>
-      </article>
-      <article class="card app assistant">
-        <div class="app-head"><span class="app-emoji">🌍</span><h3>Multilingual by design</h3></div>
-        <p>A language is <b>a setting, not a port</b>. The profile carries the prompt and the voice, and
-        every planned provider is already multilingual.</p>
-        <ul class="facts mono">
-          <li>Whisper: 99 languages, runs locally</li>
-          <li>ElevenLabs / Cartesia: multilingual voices behind one API</li>
-          <li>VAD and barge-in do not care about language: they hear energy and speech, not words</li>
-          <li>context policies and tool isolation work the same in any locale</li>
-        </ul>
-      </article>
-      <article class="card app sales">
-        <div class="app-head"><span class="app-emoji">📱</span><h3>Fully local, fully private</h3></div>
-        <p>The goal is an assistant for a business owner where <b>the knowledge base lives on the phone
-        and both the reasoning and the voice run on the device, offline</b>. Every stage of the pipeline
-        already has a local option.</p>
+      <div class="card">
+        <h3>Every stage already has a local option</h3>
         <ul class="facts mono">
           <li>VAD: Silero, already designed to run local in this repo</li>
           <li>STT: faster-whisper on GPU/NPU</li>
@@ -536,13 +593,81 @@
           <li>TTS: Piper / Kokoro on desktop; the phone target still needs a benchmark (see licensing)</li>
           <li>memory: sqlite-vec, a vector database in one file</li>
         </ul>
-      </article>
+      </div>
+      <div class="card">
+        <h3>The ceiling is enforced at runtime</h3>
+        <p><span class="mono">BudgetDenied</span> carries an affordable authored fallback,
+        reserve-then-settle holds under concurrency, and barge-in stops the meter. Any cloud stage can
+        be swapped for an on-device one through the same adapter interface of about 50 lines. All of
+        it, with the caveats:
+        <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/economics.md" target="_blank" rel="noopener">docs/economics.md</a>.
+        The fully offline path, measured:
+        <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/local-stack.md" target="_blank" rel="noopener">docs/local-stack.md</a>.</p>
+      </div>
     </div>
-    <p class="note">
-      The demo you just ran uses stub providers through the same interfaces a real local or cloud
-      model would use. 51 tests pass through those seams, so switching to a real model is an adapter,
-      not a rebuild.
+
+    <p class="note">Engine wiring, FMOD first: see <a href="#wiring">Wiring into FMOD</a> above.</p>
+
+    <div class="warn-box">
+      <div class="warn-head mono">LICENSING WILL BITE YOU BEFORE PERFORMANCE DOES</div>
+      <ul>
+        <li><b>Piper</b> now lives at <span class="mono">piper1-gpl</span> and is <b>GPL-3.0</b>. It embeds
+        espeak-ng, which is GPL, so linking against it makes your binary a derived work. Dynamic linking
+        does not avoid that, and pinning the old MIT code does not help either: its CMake still links
+        GPL espeak-ng. Running Piper as a separate process still ships a GPL binary alongside your game,
+        so talk to a lawyer, and GPLv3 Installation Information is a real problem on locked consoles.
+        An MIT fork with an espeak-free G2P, such as <span class="mono">ayutaz/piper-plus</span>, is the
+        other route.</li>
+        <li><b>Voice models are licensed separately from the engine.</b>
+        <span class="mono">en_US-lessac</span>, the voice in Piper's own examples, is under the
+        restrictive Blizzard 2013 license. Read the MODEL_CARD of every voice you ship.</li>
+        <li><b>Kokoro-82M is Apache-2.0, weights included.</b> Clean licensing, but it measured
+        <b>RTF 2.77–6.63 on a Raspberry Pi 4</b>, so it is not real time on low-power ARM. Fine on
+        desktop; benchmark it before committing a handheld target.</li>
+        <li><b>sherpa-onnx</b> (Apache-2.0) is the easiest runtime to ship: Windows, Linux, macOS, Android
+        and iOS, no network needed. It still pulls in GPL espeak-ng through piper-phonemize, though there
+        is an open upstream issue to remove it.</li>
+      </ul>
+      <p>None of this stops you shipping. It means choosing the stack with a lawyer in the room. And
+      because every provider sits behind the same adapter interface, changing that choice later is a
+      swap rather than a rewrite. The full picture:
+      <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/licensing.md" target="_blank" rel="noopener">docs/licensing.md</a>.</p>
+    </div>
+  </section>
+
+  <!-- ============ ROADMAP ============ -->
+  <section id="roadmap" class="section alt">
+    <h2>Status and roadmap</h2>
+    <p class="lead">
+      Nothing here has been compiled inside a Unity Editor yet, and the FMOD programmer-instrument sink is milestone M1.
+      VoiceRT was selected for AltaLab, the accelerator run by the AltaIR Capital fund; the Fall 2026
+      cohort is where the NPC asset gets shipped.
     </p>
+    <ul class="milestones">
+      <li class="done"><b>DONE</b> Core pipeline, barge-in with history repair, the NPC profile, game layer (dialogue LOD, voice pool, compute budget), TCP engine bridge, economics ledger. 121 tests, mypy strict.</li>
+      <li class="next"><b>M1</b><span class="tag mono">NEXT</span> The FMOD programmer-instrument sink is milestone M1: the Unity package gets a programmer-sound callback (<span class="mono">FMOD.Studio.EVENT_CALLBACK_TYPE.CREATE_PROGRAMMER_SOUND</span>). Done when a programmer sound plays PCM from the bridge, compiled in Unity 6.3 LTS with FMOD for Unity 2.03.14.</li>
+      <li><b>M2</b> Demo scene, a tavern keeper: mic → NPC → FMOD event, barge-in and LOD on screen; 30-second video.</li>
+      <li><b>M3</b> Live providers behind the adapters (Deepgram, Claude Haiku, ElevenLabs Flash) and the local path (faster-whisper, Ollama, sherpa-onnx), both runnable end to end.</li>
+      <li><b>M4</b> UPM 0.1 release; Unreal + Wwise parity.</li>
+    </ul>
+    <p class="note">
+      Language is a setting, not a port. The profile carries the prompt and the voice, and every
+      planned provider is multilingual. VAD and barge-in listen for energy and speech, not words.
+    </p>
+
+    <div class="card docs-card">
+      <h3>Docs</h3>
+      <p class="mono dim">121 tests · mypy strict · stub providers, no API keys</p>
+      <div class="doc-links">
+        <a class="chip" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo#readme" target="_blank" rel="noopener">README</a>
+        <a class="chip" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/architecture.md" target="_blank" rel="noopener">architecture</a>
+        <a class="chip" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/economics.md" target="_blank" rel="noopener">economics</a>
+        <a class="chip" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/licensing.md" target="_blank" rel="noopener">licensing</a>
+        <a class="chip" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/middleware-wiring.md" target="_blank" rel="noopener">middleware-wiring</a>
+        <a class="chip" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/audio-chain.md" target="_blank" rel="noopener">audio-chain</a>
+        <a class="chip" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo/blob/main/docs/local-stack.md" target="_blank" rel="noopener">local-stack</a>
+      </div>
+    </div>
   </section>
 
   <!-- ============ AUTHOR'S NOTE ============ -->
@@ -550,31 +675,33 @@
     <div class="author-note">
       <div class="author-kicker mono">A NOTE FROM THE AUTHOR</div>
       <p class="author-lead">
-        This is a working prototype. I am still building on it. I have worked with <b>sound and voice
-        for more than ten years</b>, and that is where the design comes from: I know what processing
-        belongs at each point of the chain, what is worth automating, and how it has to behave on a
-        server.
+        This is a working prototype. I am still building on it.
       </p>
       <p class="author-body">
-        What I want is <b>one agent that can be configured for almost any job</b>. It should run
-        locally, speak several languages, and be simple to plug into whatever you already have: a
-        stable frame contract and adapters of about 50 lines. A fully local knowledge base is the
-        next step.
-      </p>
-      <p class="author-body">
-        In games it connects to <b>Wwise or FMOD</b>. The engine sends the player's voice to the NPC,
-        and the NPC answers inside the game world with no dialogue script behind it. The use I care
-        about most is a <b>personal assistant for a business owner</b>, where the database, the
-        reasoning and the voice all end up on the phone and work without internet. Given a database,
-        prepared prompts and a voice, that is an engineering plan rather than a wish.
+        I have worked in sound and voice for more than ten years, and the design comes from the mix,
+        not from an SDK: what processing belongs at each point of the chain, and what a voice has to
+        do to sit inside a game's audio like every other sound. Vyacheslav Romanenko brings 14+ years
+        of technical sound design and FMOD across PC, console and mobile.
       </p>
       <div class="author-sign">
         <span class="author-name">Raph</span>
-        <span class="author-role mono">10+ years in sound and voice</span>
+        <span class="author-role mono">more than ten years in sound and voice</span>
       </div>
     </div>
   </section>
 
+  <!-- ============ NEXT STEP ============ -->
+  <section id="next" class="section closing">
+    <p class="lead">
+      Working prototype, MIT. The demo runs on deterministic stubs, so it needs no API keys.
+      The FMOD programmer-instrument sink is milestone M1, targeted for the end of the AltaLab sprint.
+      Nothing has been compiled inside a Unity Editor yet.
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo#quick-start-unity--fmod" target="_blank" rel="noopener">Install the Unity package</a>
+      <a class="btn" href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo#readme" target="_blank" rel="noopener">Read the README</a>
+    </div>
+  </section>
 
 </main>
 
@@ -582,10 +709,10 @@
 <footer>
   <div class="foot-inner">
     <div>
-      <b>VoiceRT</b> · Python 3.11+ asyncio · zero-dependency core ·
+      <b>VoiceRT</b> · Unity + FMOD · Python core · MIT ·
       <a href="https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" target="_blank" rel="noopener">source code ↗</a>
     </div>
-    <div class="mono dim">frame pipeline from Pipecat · barge-in from LiveKit Agents · orchestration from Rapida · implementation original, MIT</div>
+    <div class="mono dim">design references: Pipecat · LiveKit Agents · Rapida AI — every design decision and the implementation are original</div>
   </div>
 </footer>
 
