@@ -43,7 +43,7 @@ The whole argument with numbers: [docs/economics.md](docs/economics.md).
 **1. Install the package.** `Window > Package Manager > +`, then either *Add package from git URL* pointing at the package subfolder (the repo root is not a package):
 
 ```
-https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo.git?path=/integrations/unity/com.voicert.npc
+https://github.com/raphsoundmix-ctrl/voicert.git?path=/integrations/unity/com.voicert.npc
 ```
 
 or *Install package from disk* and pick `integrations/unity/com.voicert.npc/package.json`. Unity records a `file:` reference, so pulling the repo updates the package.
@@ -65,8 +65,8 @@ Both engine components are un-compiled against the real engines in this repo —
 ### Run it without an engine
 
 ```bash
-git clone https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo.git
-cd AI_Voice_Agent_Demo
+git clone https://github.com/raphsoundmix-ctrl/voicert.git
+cd voicert
 python -m venv .venv && .venv/Scripts/activate     # Linux/mac: source .venv/bin/activate
 pip install -e ".[dev]"
 

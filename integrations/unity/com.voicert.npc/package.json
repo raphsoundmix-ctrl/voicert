@@ -4,7 +4,7 @@
   "displayName": "VoiceRT NPC",
   "description": "Drop a talking NPC onto any GameObject. Streams real-time synthesized voice from a VoiceRT runtime into an AudioSource, with barge-in flush, subtitles, tool callbacks and dialogue LOD.",
   "unity": "2021.3",
-  "author": { "name": "Raph", "url": "https://github.com/raphsoundmix-ctrl/AI_Voice_Agent_Demo" },
+  "author": { "name": "Raph", "url": "https://github.com/raphsoundmix-ctrl/voicert" },
   "keywords": ["voice", "npc", "tts", "ai", "dialogue", "audio"],
   "license": "MIT"
 }
