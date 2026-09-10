@@ -7,17 +7,17 @@ How a player's microphone becomes an in-character NPC reply, and why the runtime
 ```mermaid
 flowchart LR
     subgraph U["Unity process"]
-        MIC["Player mic<br/>(VoiceRT Microphone)"]
+        MIC["Push-to-talk mic<br/>hold key · release = ENDPOINT"]
         LOD["Dialogue LOD<br/>LIVE · BARK · CROWD · OFF"]
         NPC["VoiceRT NPC<br/>(MonoBehaviour)"]
         FMOD["FMOD event<br/>programmer instrument"]
         MIX["Game mix<br/>3D · occlusion · ducking · buses"]
     end
     subgraph V["voicert process (Python)"]
-        VAD["VAD"] --> STT["STT"] --> LLM["LLM · lore-locked<br/>tools: engine only"] --> TTS["TTS → PCM16"]
-        POOL["Voice pool · cost ledger<br/>caps agents & $/player"]
+        VAD["VAD<br/>EnergyVAD · barge-in only"] --> STT["STT<br/>Whisper small.en"] --> LLM["LLM · lore-locked<br/>qwen3:8b · tools: engine only"] --> TTS["TTS<br/>Kokoro → PCM16"]
+        GATE["GPU gate<br/>won't start on a CPU fallback"]
     end
-    MIC -- "PCM16 16 kHz" --> NPC
+    MIC -- "PCM16 16 kHz, while held" --> NPC
     LOD -- "connect only if LIVE" --> NPC
     NPC == "TCP · one socket per live NPC" ==> VAD
     TTS -- "AUDIO_OUT" --> FMOD --> MIX
@@ -154,7 +154,7 @@ src/voicert/
     usage.py           # what a turn consumed -> what it costs (pure)
     ledger.py          # reserve / settle / abandon, degrade instead of fail
     planning.py        # affordable turns, required local share, ceiling from revenue
-tests/                 # 121 tests: pipeline, barge-in races, tool isolation, game layer, cost ceilings
+tests/                 # 228 tests: pipeline, barge-in races, turn boundaries, tool isolation, game layer, cost ceilings
 examples/              # run_demo.py (voice loop) and game_open_world.py (240-NPC square)
 tools/                 # unit_economics.py — prints the cost table from measured usage
 docs/                  # site (index.html, app.js, styles.css) + architecture / economics / licensing / middleware-wiring / audio-chain / local-stack

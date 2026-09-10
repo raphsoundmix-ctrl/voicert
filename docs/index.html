@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VoiceRT — AI voice agents for game NPCs · Unity + FMOD</title>
-<meta name="description" content="Interruptible voice NPCs for Unity. One character asset, streamed into the game's own mix. The FMOD programmer-instrument sink is milestone M1. Working prototype, MIT.">
+<meta name="description" content="Interruptible voice NPCs for Unity, running fully local on your own GPU. The FMOD programmer-instrument sink is live and verified: mic to voice through the game's own mix. Working prototype, MIT.">
 <meta property="og:title" content="VoiceRT — AI voice agents for game NPCs · Unity + FMOD">
-<meta property="og:description" content="Interruptible voice NPCs for Unity. One character asset, streamed into the game's own mix. The FMOD programmer-instrument sink is milestone M1. Working prototype, MIT.">
+<meta property="og:description" content="Interruptible voice NPCs for Unity, running fully local on your own GPU. The FMOD programmer-instrument sink is live and verified: mic to voice through the game's own mix. Working prototype, MIT.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ai-voice-agent-demo-rose.vercel.app/">
 <meta property="og:site_name" content="VoiceRT">
@@ -52,14 +52,14 @@
         and get an in-character answer inside the game's own mix.
       </p>
       <p class="sub status">
-        The Unity package streams into a plain <span class="mono">AudioSource</span> today; the FMOD
-        programmer-instrument sink is milestone M1.
+        The FMOD programmer-instrument sink is live and verified: hold a key, walk up to an NPC, and
+        talk — speech recognition, the reply and the voice all run on your own GPU.
       </p>
       <div class="chips">
         <span class="chip"><b>0 ms</b> interrupt gate</span>
-        <span class="chip">pool capped at <b>7 agents</b> for 240 NPCs</span>
+        <span class="chip">fully local · <b>Whisper</b> · <b>qwen3:8b</b> · <b>Kokoro</b></span>
         <span class="chip">synthesis off the render thread · <b>16.6 ms</b> at 60 fps</span>
-        <span class="chip"><b>$0.00015</b> / turn · cloud brain, local voice</span>
+        <span class="chip"><b>$0</b> / turn · no API key, GPU-enforced</span>
         <span class="chip"><b>MIT</b></span>
       </div>
       <div class="cta">
@@ -79,19 +79,20 @@
         <pre class="cmd">Window &gt; Package Manager &gt; + &gt; Add package from git URL
 https://github.com/raphsoundmix-ctrl/voicert.git?path=/integrations/unity/com.voicert.npc
 Add Component &gt; VoiceRT &gt; VoiceRT NPC
-python -m voicert.game.bridge 127.0.0.1 8765
-# then press Play</pre>
+# press Play — the local server (and Ollama) start themselves</pre>
       </div>
       <div class="card">
         <h3>Without an engine</h3>
         <pre class="cmd">pip install -e ".[dev]"
 python examples/run_demo.py npc   # one turn, a barge-in, then the NPC carries on
-pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
+pytest -q &amp;&amp; mypy                # 228 tests, no API keys</pre>
       </div>
     </div>
     <p class="note">
-      Streams into a plain <span class="mono">AudioSource</span> today.
-      The FMOD programmer-instrument sink is milestone M1. Not compiled inside an Editor yet.
+      Compiles and runs inside Unity 6.3 LTS with the FMOD programmer-instrument sink; a plain
+      <span class="mono">AudioSource</span> still works if you skip FMOD. Whisper, the local LLM
+      and Kokoro all run on your own GPU — the server checks all three and refuses to start on a
+      CPU fallback.
     </p>
   </section>
 
@@ -137,14 +138,14 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
   <section id="live" class="section alt">
     <h2>How it works</h2>
     <p class="lead">
-      Everything heavy (VAD, STT, the LLM, TTS, the voice pool, the ledger) stays in the Python
-      process. The engine gets a few hundred lines of C#: one socket per live NPC, PCM queued into
-      an ordinary engine sound, text and tool calls forwarded to your MonoBehaviour. The engine never
-      runs a model.
+      Everything heavy (VAD, STT, the LLM, TTS) stays in the Python process, on your own GPU. The
+      engine gets a few hundred lines of C#: one socket per live NPC, PCM queued into an ordinary
+      engine sound, text and tool calls forwarded to your MonoBehaviour. The engine never runs a
+      model.
     </p>
 
     <div class="diagram-wrap">
-      <svg id="diagram" viewBox="0 0 920 590" role="img" aria-label="NPC voice pipeline. Unity process: the player's mic sends PCM16 16 kHz to the VoiceRT NPC component; the Dialogue LOD connects it only in the LIVE tier; the NPC holds one TCP socket to the voicert process. voicert process in Python: VAD, STT, a lore-locked LLM with engine-only tools, TTS to PCM16, plus a voice pool and cost ledger. TTS audio returns as AUDIO_OUT into an FMOD programmer instrument and then the game mix; the LLM returns text and tool calls for subtitles and gestures; on barge-in the VAD cancels everything and sends FLUSH to the FMOD event.">
+      <svg id="diagram" viewBox="0 0 920 590" role="img" aria-label="NPC voice pipeline and what triggers a reply. Unity process: the player holds a push-to-talk key; the mic captures PCM16 at 16 kHz; the Dialogue LOD connects the NPC's socket only in the LIVE tier; the VoiceRT NPC component holds one TCP socket to the voicert process. Releasing the key sends an ENDPOINT — that is what starts generation, not silence. voicert process in Python: an energy-based VAD opens capture and drives barge-in but does not close a push-to-talk turn; Whisper transcribes the whole utterance; a lore-locked LLM (Ollama, tools restricted to the game engine) replies; Kokoro synthesizes PCM16 chunks. All three stages must resolve to CUDA or the server refuses to start. Audio returns as AUDIO_OUT into an FMOD programmer instrument and the game mix; the LLM returns text and tool calls for subtitles and gestures; on barge-in the VAD cancels everything in flight and sends FLUSH to the FMOD event.">
         <defs>
           <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#3d4657"/>
@@ -186,31 +187,31 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
         <text class="barge-label mono" x="490" y="324" text-anchor="middle" transform="rotate(-90 490 324)">barge-in: cancel + FLUSH</text>
 
         <!-- Unity nodes -->
-        <g class="node"><rect x="30" y="70" width="190" height="56" rx="6"/><text x="125" y="92">Player mic</text><text class="n-sub" x="125" y="112">VoiceRT Microphone</text></g>
+        <g class="node"><rect x="30" y="70" width="190" height="56" rx="6"/><text x="125" y="92">Push-to-talk mic</text><text class="n-sub" x="125" y="112">release = ENDPOINT</text></g>
         <g class="node"><rect x="240" y="70" width="190" height="56" rx="6"/><text x="335" y="92">Dialogue LOD</text><text class="n-sub" x="335" y="112">LIVE · BARK · CROWD · OFF</text></g>
         <g class="node active"><rect x="130" y="170" width="200" height="56" rx="6"/><text x="230" y="192">VoiceRT NPC</text><text class="n-sub" x="230" y="212">MonoBehaviour</text></g>
         <g class="node"><rect x="130" y="422" width="200" height="56" rx="6"/><text x="230" y="444">FMOD event</text><text class="n-sub" x="230" y="464">programmer instrument</text></g>
         <g class="node"><rect x="110" y="500" width="240" height="56" rx="6"/><text x="230" y="522">Game mix</text><text class="n-sub" x="230" y="542">3D · occlusion · ducking · buses</text></g>
 
         <!-- voicert nodes -->
-        <g class="node"><rect x="560" y="170" width="240" height="56" rx="6"/><text x="680" y="192">VAD</text><text class="n-sub" x="680" y="212">Silero · barge-in starts here</text></g>
-        <g class="node"><rect x="560" y="254" width="240" height="56" rx="6"/><text x="680" y="276">STT</text><text class="n-sub" x="680" y="296">speech to text, streamed</text></g>
+        <g class="node"><rect x="560" y="170" width="240" height="56" rx="6"/><text x="680" y="192">VAD</text><text class="n-sub" x="680" y="212">EnergyVAD · barge-in only</text></g>
+        <g class="node"><rect x="560" y="254" width="240" height="56" rx="6"/><text x="680" y="276">STT</text><text class="n-sub" x="680" y="296">Whisper small.en</text></g>
         <g class="node"><rect x="560" y="338" width="240" height="56" rx="6"/><text x="680" y="360">LLM · lore-locked</text><text class="n-sub" x="680" y="380">tools: engine only</text></g>
-        <g class="node"><rect x="560" y="422" width="240" height="56" rx="6"/><text x="680" y="444">TTS</text><text class="n-sub" x="680" y="464">→ PCM16 chunks</text></g>
-        <g class="node"><rect x="560" y="500" width="320" height="56" rx="6"/><text x="720" y="522">Voice pool · cost ledger</text><text class="n-sub" x="720" y="542">caps agents and $ per player</text></g>
+        <g class="node"><rect x="560" y="422" width="240" height="56" rx="6"/><text x="680" y="444">TTS</text><text class="n-sub" x="680" y="464">Kokoro → PCM16 chunks</text></g>
+        <g class="node"><rect x="560" y="500" width="320" height="56" rx="6"/><text x="720" y="522">GPU gate</text><text class="n-sub" x="720" y="542">won't start on a CPU fallback</text></g>
       </svg>
       <div class="diagram-linear-wrap">
         <ol class="diagram-linear" aria-label="NPC voice pipeline, in order">
-          <li>Player mic, PCM16 16 kHz</li>
+          <li>Push-to-talk mic: hold to capture, release sends ENDPOINT — that starts generation</li>
           <li>Dialogue LOD opens the socket only for a LIVE NPC</li>
-          <li>VAD, barge-in starts here</li>
-          <li>STT</li>
-          <li>LLM, lore-locked, engine-only tools</li>
-          <li>TTS to PCM16</li>
+          <li>EnergyVAD: drives barge-in, does not close a held-key turn</li>
+          <li>STT: Whisper small.en, whole utterance</li>
+          <li>LLM: qwen3:8b via Ollama, lore-locked, engine-only tools</li>
+          <li>TTS: Kokoro to PCM16</li>
           <li>FMOD programmer instrument</li>
           <li>Game mix: 3D, occlusion, ducking, buses</li>
         </ol>
-        <p class="diagram-linear-note mono">Barge-in cancels everything in flight and sends FLUSH.</p>
+        <p class="diagram-linear-note mono">All three stages must resolve to CUDA or the server refuses to start. Barge-in cancels everything in flight and sends FLUSH.</p>
       </div>
       <p class="diagram-note">Unreal + Wwise is the same picture with <span class="mono">UAkAudioInputComponent</span> in the FMOD slot.</p>
     </div>
@@ -223,8 +224,11 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
           <tr><th>System prompt</th><td>strict lore rules. The character knows nothing of the real world, speaks in one or two sentences, and answers attempts to break character in character</td></tr>
           <tr><th>Tools</th><td><span class="mono">emit_game_event · query_world_state · play_animation</span>. Engine only, and the isolation is structural</td></tr>
           <tr><th>Barge-in gate</th><td>0 ms. Cuts instantly, because game feel beats politeness</td></tr>
+          <tr><th>Turn boundary</th><td>a client that ends its own utterances (push-to-talk) owns the boundary; the VAD still opens capture and still drives barge-in, but only the key closes a turn — a pause mid-sentence is not the end of one</td></tr>
           <tr><th>Interrupted reply</th><td>dropped: cleaner lore, shorter prompt, lower latency</td></tr>
           <tr><th>Latency budget</th><td>from end of player speech: first LLM token ≤ 150 ms · first audio ≤ 300 ms</td></tr>
+          <tr><th>Memory</th><td>one JSON file per (NPC, player), read before the reply and written after — the character recognizes a returning player without being told</td></tr>
+          <tr><th>Local stack</th><td><span class="mono">Whisper small.en · qwen3:8b via Ollama · Kokoro</span>. The server checks all three resolved to CUDA at boot and refuses to start on a CPU fallback</td></tr>
         </tbody>
       </table>
     </div>
@@ -268,9 +272,10 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
       </div>
     </div>
     <p class="note">
-      Right now the pipeline runs on deterministic stubs, so the tests and the demo need no API keys:
-      50 ms to first audio on stubs, and 121 tests pass through the same interfaces a real local or
-      cloud model would use, so switching to a real model is an adapter, not a rebuild. Internals:
+      The automated test suite runs on deterministic stubs, so CI needs no API keys and no GPU: 50 ms
+      to first audio on stubs, 228 tests, mypy strict on 33 files. The Unity demo itself runs the real
+      local stack — Whisper, qwen3:8b, Kokoro — because that is the point of the pipeline. Switching
+      either path to a different provider is an adapter, not a rebuild. Internals:
       <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/architecture.md" target="_blank" rel="noopener">docs/architecture.md</a>.
     </p>
   </section>
@@ -294,7 +299,7 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
           <li>pass it to a <b>programmer instrument</b> via CREATE_PROGRAMMER_SOUND, release on DESTROY</li>
           <li>it inherits the event's 3D panning, buses and effects</li>
           <li>concurrency is already handled: maxchannels 256–1024 virtual · softwareChannels 64 real</li>
-          <li>status: contract defined in voicert.game.sinks; the FMOD programmer-instrument sink is milestone M1</li>
+          <li>status: shipped — compiled and verified live in Unity 6.3 LTS with FMOD for Unity 2.03.14</li>
         </ul>
       </div>
       <div class="card engine">
@@ -308,7 +313,7 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
         <ul class="facts mono">
           <li>Add Component &gt; VoiceRT &gt; VoiceRT NPC; it requires an AudioSource, so Unity adds one</li>
           <li>VoiceRT Dialogue LOD opens and closes the socket as the player crosses the LIVE distance</li>
-          <li>status: wire protocol and PCM ring buffer verified against a live bridge from C# (13 xUnit tests, including a full turn plus a barge-in over a real socket); not compiled inside an Editor yet</li>
+          <li>status: wire protocol and PCM ring buffer verified against a live bridge from C# (13 xUnit tests, including a full turn plus a barge-in over a real socket); compiled and running end to end, including a Windows player build</li>
         </ul>
       </div>
       <div class="card engine">
@@ -327,12 +332,12 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
       </div>
     </div>
     <p class="note">
-      Both engine components are un-compiled against the real engines in this repo. What is verified:
-      the wire protocol and the PCM ring buffer, cross-checked against a live
-      <span class="mono">voicert.game.bridge</span> process from both C# and standalone C++. The
-      engine-specific glue follows each engine's documented API shape but has not been exercised
-      inside an Editor. Treat it as a working prototype to drop in and iterate on, not a
-      marketplace-ready asset yet. Wiring for both middlewares, FMOD first:
+      The Unity component is compiled and running against the real engine: a Windows player build
+      that starts its own local server and holds a full voice conversation with an NPC through a real
+      microphone. The Unreal component is not — protocol and PCM ring buffer verified against a live
+      <span class="mono">voicert.game.bridge</span> process from standalone C++, but the engine-specific
+      glue has not been exercised inside an Editor. Treat Unreal as a working prototype to drop in and
+      iterate on, not a marketplace-ready asset yet. Wiring for both middlewares, FMOD first:
       <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/middleware-wiring.md" target="_blank" rel="noopener">docs/middleware-wiring.md</a>.
     </p>
   </section>
@@ -353,7 +358,7 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
         <div class="fx"><b>AGC</b><span>−18 dBFS target,<br>stable level into VAD</span></div>
         <div class="fx"><b>Soft Limiter</b><span>−3 dBFS ceiling,<br>no clipping downstream</span></div>
         <div class="fx"><b>Resample</b><span>16 kHz mono PCM —<br>the native STT format</span></div>
-        <div class="fx hot"><b>VAD</b><span>Silero, on-device, &lt;1 ms —<br>barge-in starts here</span></div>
+        <div class="fx hot"><b>VAD</b><span>Energy-gated, on-device —<br>barge-in starts here, Silero next</span></div>
       </div>
     </div>
 
@@ -378,38 +383,39 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
 
   <!-- ============ MODELS ============ -->
   <section id="models" class="section alt">
-    <h2>Models: interfaces now, providers later</h2>
+    <h2>Models: the local stack runs today, cloud is an adapter away</h2>
     <p class="lead">
       The core does not know which vendor is behind a stage. Every provider is an adapter of about
       50 lines against a stable interface (<span class="mono">STTService / LLMService / TTSService</span>).
-      Right now the pipeline runs on deterministic stubs, so the tests and the demo need no API keys.
+      The local path below is what the Unity demo actually runs, GPU-enforced end to end; the cloud
+      entries are adapters against the same interface, not yet wired to a live key.
     </p>
     <div class="grid3">
       <div class="card model">
         <div class="model-tag stt">STT · speech to text</div>
         <ul>
-          <li><b>Deepgram Nova-3</b> — websocket streaming, ~150 ms interim results <em>cloud</em></li>
-          <li><b>faster-whisper</b> — local GPU inference, no key required <em>local</em></li>
+          <li><b>faster-whisper</b> small.en — local GPU inference, no key required <em>local · live</em></li>
+          <li><b>Deepgram Nova-3</b> — websocket streaming, ~150 ms interim results <em>cloud · adapter only</em></li>
         </ul>
       </div>
       <div class="card model">
         <div class="model-tag llm">LLM · reasoning &amp; tools</div>
         <ul>
-          <li><b>Claude Haiku</b> — speed wins <em>cloud</em></li>
-          <li><b>Ollama</b> — llama.cpp-class models on the player's machine <em>local</em></li>
-          <li><b>OpenRouter</b> — any model behind one key, for experimentation</li>
+          <li><b>Ollama</b> — qwen3:8b, fully resident in VRAM, no key required <em>local · live</em></li>
+          <li><b>Claude Haiku</b> — speed wins <em>cloud · adapter only</em></li>
+          <li><b>OpenRouter</b> — any model behind one key, for experimentation <em>cloud · adapter only</em></li>
         </ul>
       </div>
       <div class="card model">
         <div class="model-tag tts">TTS · text to speech</div>
         <ul>
-          <li><b>ElevenLabs Flash v2.5</b> — ≈75 ms TTFB <em>cloud</em></li>
-          <li><b>Cartesia Sonic</b> — stable prosody over long sessions</li>
-          <li><b>sherpa-onnx</b> — Piper / Kokoro voices, $0 per player (see licensing) <em>local</em></li>
+          <li><b>sherpa-onnx</b> — Kokoro, fp32 on CUDA, $0 per player (see licensing) <em>local · live</em></li>
+          <li><b>ElevenLabs Flash v2.5</b> — ≈75 ms TTFB <em>cloud · adapter only</em></li>
+          <li><b>Cartesia Sonic</b> — stable prosody over long sessions <em>cloud · adapter only</em></li>
         </ul>
       </div>
     </div>
-    <p class="note"><span class="mono">ConfigFactory</span> gives the NPC the fastest model that still holds character.</p>
+    <p class="note"><span class="mono">ConfigFactory</span> gives the NPC the fastest model that still holds character — today that is the local stack above.</p>
   </section>
 
   <!-- ============ COST ============ -->
@@ -587,7 +593,7 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
       <div class="card">
         <h3>Every stage already has a local option</h3>
         <ul class="facts mono">
-          <li>VAD: Silero, already designed to run local in this repo</li>
+          <li>VAD: EnergyVAD ships today; Silero is designed, not yet wired</li>
           <li>STT: faster-whisper on GPU/NPU</li>
           <li>LLM: llama.cpp-class on-device models</li>
           <li>TTS: Piper / Kokoro on desktop; the phone target still needs a benchmark (see licensing)</li>
@@ -639,15 +645,16 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
   <section id="roadmap" class="section alt">
     <h2>Status and roadmap</h2>
     <p class="lead">
-      Nothing here has been compiled inside a Unity Editor yet, and the FMOD programmer-instrument sink is milestone M1.
-      VoiceRT was selected for AltaLab, the accelerator run by the AltaIR Capital fund; the Fall 2026
-      cohort is where the NPC asset gets shipped.
+      The FMOD programmer-instrument sink shipped: compiled in Unity 6.3 LTS and verified with a real
+      microphone, ahead of the AltaLab sprint deadline. VoiceRT was selected for AltaLab, the
+      accelerator run by the AltaIR Capital fund; the Fall 2026 cohort is where the NPC asset gets
+      shipped.
     </p>
     <ul class="milestones">
-      <li class="done"><b>DONE</b> Core pipeline, barge-in with history repair, the NPC profile, game layer (dialogue LOD, voice pool, compute budget), TCP engine bridge, economics ledger. 121 tests, mypy strict.</li>
-      <li class="next"><b>M1</b><span class="tag mono">NEXT</span> The FMOD programmer-instrument sink is milestone M1: the Unity package gets a programmer-sound callback (<span class="mono">FMOD.Studio.EVENT_CALLBACK_TYPE.CREATE_PROGRAMMER_SOUND</span>). Done when a programmer sound plays PCM from the bridge, compiled in Unity 6.3 LTS with FMOD for Unity 2.03.14.</li>
-      <li><b>M2</b> Demo scene, a tavern keeper: mic → NPC → FMOD event, barge-in and LOD on screen; 30-second video.</li>
-      <li><b>M3</b> Live providers behind the adapters (Deepgram, Claude Haiku, ElevenLabs Flash) and the local path (faster-whisper, Ollama, sherpa-onnx), both runnable end to end.</li>
+      <li class="done"><b>DONE</b> Core pipeline, barge-in with history repair, the NPC profile, game layer (dialogue LOD, TCP engine bridge). 228 tests, mypy strict on 33 files.</li>
+      <li class="done"><b>DONE — M1</b> The FMOD programmer-instrument sink (<span class="mono">FMOD.Studio.EVENT_CALLBACK_TYPE.CREATE_PROGRAMMER_SOUND</span>), compiled in Unity 6.3 LTS with FMOD for Unity 2.03.14. Verified with a real microphone: Whisper small.en → qwen3:8b (Ollama) → Kokoro, all CUDA-enforced, memory per (NPC, player), barge-in over a live gate. A Windows player build starts its own server — no manual Python or Ollama launch.</li>
+      <li class="next"><b>M2</b><span class="tag mono">NEXT</span> Demo scene polish and a 30-second video; mic → NPC → FMOD event, barge-in and memory already run, on screen, today.</li>
+      <li><b>M3</b> Local path (faster-whisper, Ollama, sherpa-onnx) runs end to end, GPU-enforced. Cloud adapters (Deepgram, Claude Haiku, ElevenLabs Flash) remain interface-only, not yet wired to a live key.</li>
       <li><b>M4</b> UPM 0.1 release; Unreal + Wwise parity.</li>
     </ul>
     <p class="note">
@@ -657,7 +664,7 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
 
     <div class="card docs-card">
       <h3>Docs</h3>
-      <p class="mono dim">121 tests · mypy strict · stub providers, no API keys</p>
+      <p class="mono dim">228 tests · mypy strict, 33 files · local stack needs no API keys</p>
       <div class="doc-links">
         <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert#readme" target="_blank" rel="noopener">README</a>
         <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/architecture.md" target="_blank" rel="noopener">architecture</a>
@@ -693,9 +700,9 @@ pytest -q &amp;&amp; mypy                # 121 tests, no API keys</pre>
   <!-- ============ NEXT STEP ============ -->
   <section id="next" class="section closing">
     <p class="lead">
-      Working prototype, MIT. The demo runs on deterministic stubs, so it needs no API keys.
-      The FMOD programmer-instrument sink is milestone M1, targeted for the end of the AltaLab sprint.
-      Nothing has been compiled inside a Unity Editor yet.
+      Working prototype, MIT. The Unity demo runs the real local stack on your own GPU — no API keys,
+      no cloud bill. The FMOD programmer-instrument sink shipped and is verified live, ahead of the
+      AltaLab sprint deadline.
     </p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/raphsoundmix-ctrl/voicert#quick-start-unity--fmod" target="_blank" rel="noopener">Install the Unity package</a>

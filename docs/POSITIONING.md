@@ -6,7 +6,7 @@ Status: DRAFT. Raph confirms the sentence in AltaLab Day 1, Task 4. Until then e
 
 > We help Unity game developers give NPCs real, interruptible voice conversations without a recording budget, through one FMOD-native character asset, so players can talk to any NPC and get an in-character answer inside the game's own mix.
 
-What is true today, and what public copy says next to the sentence: the Unity package streams into a plain `AudioSource`; the FMOD programmer-instrument sink is milestone M1; nothing has been compiled inside a Unity Editor yet. The sentence is the promise; the status line stays beside it until M1 ships.
+What is true today, and what public copy says next to the sentence: the Unity package streams into a plain `AudioSource` **or** the FMOD programmer-instrument sink; both are compiled in Unity 6.3 LTS and the FMOD path is verified live through a real microphone, fully local on one GPU. M1 has shipped, so the old "nothing has been compiled inside a Unity Editor yet" status line is retired. What stays un-exercised, and must keep saying so: the Unreal + Wwise glue.
 
 ## Audience
 

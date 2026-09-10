@@ -4,11 +4,11 @@
 
 We help Unity game developers give NPCs real, interruptible voice conversations without a recording budget, through one FMOD-native character asset, so players can talk to any NPC and get an in-character answer inside the game's own mix.
 
-Status: working prototype. The Unity package streams into a plain `AudioSource` today; the FMOD programmer-instrument sink is milestone M1. Nothing here has been compiled inside a Unity Editor yet. The [status table](#quick-start-unity--fmod) says exactly what is verified.
+Status: working prototype. The FMOD programmer-instrument sink is live — compiled in Unity 6.3 LTS and verified with a real microphone, running fully local on one GPU (Whisper small.en → qwen3:8b via Ollama → Kokoro). The [status table](#quick-start-unity--fmod) says exactly what is verified.
 
 ![Unity](https://img.shields.io/badge/Unity-2021.3%2B%20package-000000?logo=unity&logoColor=white)
 ![FMOD](https://img.shields.io/badge/FMOD-target%202.03-ff6d00)
-![Tests](https://img.shields.io/badge/tests-121%20passed-34d399)
+![Tests](https://img.shields.io/badge/tests-228%20passed-34d399)
 ![mypy](https://img.shields.io/badge/mypy-strict%20%E2%9C%93-34d399)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
@@ -36,8 +36,8 @@ The whole argument with numbers: [docs/economics.md](docs/economics.md).
 
 | Path | Status |
 |---|---|
-| Unity package (UPM, plain `AudioSource`) | wire protocol and PCM ring buffer verified against a live bridge from C# (13 xUnit tests, including a full turn plus a barge-in over a real socket); not compiled inside an Editor yet |
-| FMOD programmer-instrument sink (Unity) | contract defined in `voicert.game.sinks`; the C# implementation is milestone M1 |
+| Unity package (UPM, plain `AudioSource`) | wire protocol and PCM ring buffer verified against a live bridge from C# (13 xUnit tests, including a full turn plus a barge-in over a real socket); compiled and running end to end, including a Windows player build |
+| FMOD programmer-instrument sink (Unity) | shipped — compiled in Unity 6.3 LTS with FMOD for Unity 2.03.14, verified live: mic → NPC → programmer sound → dialogue bus, with ducking and barge-in |
 | Unreal + Wwise | protocol verified in standalone C++; Editor glue not exercised |
 
 **1. Install the package.** `Window > Package Manager > +`, then either *Add package from git URL* pointing at the package subfolder (the repo root is not a package):
@@ -52,15 +52,15 @@ or *Install package from disk* and pick `integrations/unity/com.voicert.npc/pack
 
 **3. Optional: distance-based LOD.** `Add Component > VoiceRT > VoiceRT Dialogue LOD` on the same object. It opens and closes the bridge connection as the player crosses the LIVE-tier distance, which is what keeps a whole scene of NPCs from holding hundreds of open sockets.
 
-**4. Run the bridge, then press Play.**
+**4. Press Play.** The demo starts the local server (and Ollama) itself; there is no separate Python command to run. To drive the bridge by hand instead:
 
 ```bash
 python -m voicert.game.bridge 127.0.0.1 8765
 ```
 
-In Play Mode the NPC connects, and `npc.Say("...")` (or the LOD component, once the player is close enough) drives a real turn. Add `VoiceRT Microphone` next to `VoiceRT NPC` to talk to it with a real mic; the fully offline path is in [docs/local-stack.md](docs/local-stack.md).
+In Play Mode the NPC connects, and `npc.Say("...")` (or the LOD component, once the player is close enough) drives a real turn. Add `VoiceRT Voice Input` next to `VoiceRT NPC` to talk to it with a real mic — hold the push-to-talk key, speak, release. The fully offline path is in [docs/local-stack.md](docs/local-stack.md).
 
-Both engine components are un-compiled against the real engines in this repo — there is no Unity or Unreal installed on this machine to link against `UnityEngine.dll` or `UnrealBuildTool`. What *is* verified: the wire protocol and the PCM ring buffer, cross-checked against a live `voicert.game.bridge` process from both C# (13 xUnit tests, including a full turn plus a barge-in over a real socket) and standalone C++ (protocol + ring-buffer checks against the same header the plugin ships). The engine-specific glue — `AudioClip.Create`, `OnAudioFilterRead`, `USoundWaveProcedural::QueueAudio`, `UAkAudioInputComponent` — follows each engine's documented API shape but has not been exercised inside an Editor. Treat it as a working prototype to drop in and iterate on, not a marketplace-ready asset yet.
+The Unity component is compiled and running against the real engine: Unity 6.3 LTS with FMOD for Unity 2.03.14, including a Windows player build that starts its own server and holds a full local voice conversation. The Unreal component is not — its protocol and ring buffer are verified from standalone C++ against the same header the plugin ships, but `USoundWaveProcedural::QueueAudio` and `UAkAudioInputComponent` have never been exercised inside an Editor. Treat Unreal as a working prototype to drop in and iterate on, not a marketplace-ready asset yet.
 
 ### Run it without an engine
 
@@ -72,10 +72,10 @@ pip install -e ".[dev]"
 
 python examples/run_demo.py npc        # one turn, a barge-in, then the NPC carries on
 python examples/game_open_world.py     # dialogue LOD, pool, budget and cost model for 240 NPCs
-pytest -q && mypy                      # 121 tests, strict typing, no API keys
+pytest -q && mypy                      # 228 tests, strict typing, no API keys
 ```
 
-The demo runs deterministic stub providers through the same interfaces a real model would use, so it needs no keys:
+The test suite and this example run deterministic stub providers through the same interfaces a real model would use, so they need no keys (the Unity demo runs the real local stack instead):
 
 ```
 --- USER BARGES IN ---
@@ -98,17 +98,17 @@ The NPC drops an interrupted reply instead of keeping a marked stub: the story t
 ```mermaid
 flowchart LR
     subgraph U["Unity process"]
-        MIC["Player mic<br/>(VoiceRT Microphone)"]
+        MIC["Push-to-talk mic<br/>hold key · release = ENDPOINT"]
         LOD["Dialogue LOD<br/>LIVE · BARK · CROWD · OFF"]
         NPC["VoiceRT NPC<br/>(MonoBehaviour)"]
         FMOD["FMOD event<br/>programmer instrument"]
         MIX["Game mix<br/>3D · occlusion · ducking · buses"]
     end
     subgraph V["voicert process (Python)"]
-        VAD["VAD"] --> STT["STT"] --> LLM["LLM · lore-locked<br/>tools: engine only"] --> TTS["TTS → PCM16"]
-        POOL["Voice pool · cost ledger<br/>caps agents & $/player"]
+        VAD["VAD<br/>EnergyVAD · barge-in only"] --> STT["STT<br/>Whisper small.en"] --> LLM["LLM · lore-locked<br/>qwen3:8b · tools: engine only"] --> TTS["TTS<br/>Kokoro → PCM16"]
+        GATE["GPU gate<br/>won't start on a CPU fallback"]
     end
-    MIC -- "PCM16 16 kHz" --> NPC
+    MIC -- "PCM16 16 kHz, while held" --> NPC
     LOD -- "connect only if LIVE" --> NPC
     NPC == "TCP · one socket per live NPC" ==> VAD
     TTS -- "AUDIO_OUT" --> FMOD --> MIX
@@ -116,7 +116,9 @@ flowchart LR
     LLM -- "TEXT_OUT · TOOL → subtitles, gestures" --> NPC
 ```
 
-Everything heavy (VAD, STT, the LLM, TTS, the voice pool, the ledger) stays in the Python process. The engine gets a few hundred lines of C#: one socket per live NPC, PCM queued into an ordinary engine sound, text and tool calls forwarded to your MonoBehaviour. The engine never runs a model. Unreal + Wwise is the same picture with `UAkAudioInputComponent` in the FMOD slot.
+Everything heavy (VAD, STT, the LLM, TTS) stays in the Python process, on your own GPU. The engine gets a few hundred lines of C#: one socket per live NPC, PCM queued into an ordinary engine sound, text and tool calls forwarded to your MonoBehaviour. The engine never runs a model. Unreal + Wwise is the same picture with `UAkAudioInputComponent` in the FMOD slot.
+
+**What starts a reply.** Releasing the push-to-talk key does. A client that ends its own utterances owns the turn boundary: the VAD still opens capture and still drives barge-in, but it no longer closes a turn, so a pause mid-sentence is not the end of one. An open-mic client that never sends `ENDPOINT` keeps the old behaviour and endpoints on silence. Whisper then gets one whole utterance — feeding it individual chunks produces confident nonsense.
 
 **Barge-in** is not a flag that something checks later. The VAD hears the player, and everything in flight is `task.cancel()`-ed at its next await point: LLM generation, TTS synthesis, the queues in between, and a `FLUSH` to the engine so nothing produced before the cut plays after it. The history keeps only the characters that were actually voiced (`mark_spoken()` only ever moves forward), so the NPC never remembers words the player never heard. The interrupt gate for an NPC is 0 ms, because game feel beats politeness. Internals: [docs/architecture.md](docs/architecture.md).
 
@@ -168,10 +170,10 @@ PLAYER WALKS 40 m ACROSS THE SQUARE
 
 ## Status and roadmap
 
-- [x] Core pipeline, barge-in with history repair, the NPC profile, game layer (dialogue LOD, voice pool, compute budget), TCP engine bridge, economics ledger. 121 tests, mypy strict.
-- [ ] **M1** FMOD programmer-instrument sink in the Unity package, compiled in Unity 6.3 LTS with FMOD for Unity 2.03.14 (`FMOD.Studio.EVENT_CALLBACK_TYPE.CREATE_PROGRAMMER_SOUND`).
-- [ ] **M2** Demo scene, a tavern keeper: mic → NPC → FMOD event, barge-in and LOD on screen; 30-second video.
-- [ ] **M3** Live providers behind the adapters (Deepgram, Claude Haiku, ElevenLabs Flash) and the local path (faster-whisper, Ollama, sherpa-onnx), both runnable end to end.
+- [x] Core pipeline, barge-in with history repair, the NPC profile, game layer (dialogue LOD, voice pool, compute budget), TCP engine bridge, economics ledger. 228 tests, mypy strict on 33 files.
+- [x] **M1** FMOD programmer-instrument sink in the Unity package, compiled in Unity 6.3 LTS with FMOD for Unity 2.03.14 (`FMOD.Studio.EVENT_CALLBACK_TYPE.CREATE_PROGRAMMER_SOUND`). Verified with a real microphone: Whisper small.en → qwen3:8b (Ollama) → Kokoro, all CUDA-enforced, memory per (NPC, player), barge-in over a live gate. A Windows player build starts its own server — no manual Python or Ollama launch.
+- [ ] **M2** Demo scene polish and a 30-second video; mic → NPC → FMOD event, barge-in and memory already run on screen.
+- [ ] **M3** Local path (faster-whisper, Ollama, sherpa-onnx) runs end to end, GPU-enforced. Cloud adapters (Deepgram, Claude Haiku, ElevenLabs Flash) remain interface-only, not yet wired to a live key.
 - [ ] **M4** UPM 0.1 release; Unreal + Wwise parity.
 
 Language is a setting, not a port: the profile carries the prompt and the voice, and every planned provider is multilingual. VAD and barge-in listen for energy and speech, not words.
@@ -205,7 +207,7 @@ integrations/unity/      com.voicert.npc UPM package + C# xUnit tests
 integrations/unreal/     VoiceRT .uplugin + standalone C++ protocol tests
 examples/                run_demo.py, game_open_world.py
 tools/unit_economics.py  prints the cost table from measured usage
-tests/                   121 tests: pipeline, barge-in races, tool isolation, game layer, cost ceilings
+tests/                   228 tests: pipeline, barge-in races, turn boundaries, tool isolation, game layer, cost ceilings
 ```
 
 ---

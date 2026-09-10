@@ -122,7 +122,7 @@ Every stage of the pipeline has a local option. Moving only synthesis on-device 
 
 One caveat on that last row, because it is the row that decides whether a mobile game target is viable. Piper's licensing and Kokoro's speed on low-power ARM both rule them out for a phone target as things stand today (details in [Licensing](licensing.md#licensing-will-bite-you-before-performance-does)). Nothing has been benchmarked on a phone yet. The current candidate is sherpa-onnx with an espeak-free voice, and that still has to be measured.
 
-The demo already runs stub providers through the same interfaces a real model would use. 121 tests pass through those seams, so switching to a local model is an adapter, not a rebuild.
+The local stack already runs through those seams end to end — Whisper small.en, qwen3:8b via Ollama and Kokoro, all on one GPU — and the test suite drives the same interfaces with stub providers, 228 tests, so switching a stage to a different provider is an adapter, not a rebuild.
 
 ---
 
