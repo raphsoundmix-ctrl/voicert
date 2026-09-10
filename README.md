@@ -13,7 +13,6 @@ Status: working prototype. The FMOD programmer-instrument sink is live — compi
 ![Tests](https://img.shields.io/badge/tests-228%20passed-34d399)
 ![mypy](https://img.shields.io/badge/mypy-strict%20%E2%9C%93-34d399)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-lightgrey)
 ![AltaLab](https://img.shields.io/badge/AltaLab%20accelerator-Fall%202026%20cohort-0070f3)
 
 <!-- TODO(Raph): record 20-30 s Unity scene: mic → NPC → FMOD event, barge-in shown. Then uncomment:
@@ -224,4 +223,4 @@ Over ten years in sound and voice; the design comes from the mix, not from an SD
 
 ## License
 
-MIT, © Raph. Pipecat, LiveKit Agents and Rapida AI were studied as design references; every design decision and the implementation here are original.
+All rights reserved, © 2026 Raph. Pipecat, LiveKit Agents and Rapida AI were studied as design references; every design decision and the implementation here are original.
