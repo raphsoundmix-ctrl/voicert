@@ -19,7 +19,7 @@ Status: working prototype. The FMOD programmer-instrument sink is live — compi
 ![demo](docs/media/demo.gif)
 -->
 
-**[Live page](https://ai-voice-agent-demo-rose.vercel.app/)**: the NPC pipeline, a scripted turn with a barge-in, the audio chain, the cost numbers and the roadmap.
+**[Live page](https://voice-rt-agent.vercel.app/)**: the NPC pipeline, a scripted turn with a barge-in, the audio chain, the cost numbers and the roadmap.
 
 ---
 
