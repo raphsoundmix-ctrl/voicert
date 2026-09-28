@@ -1,7 +1,7 @@
 # VoiceRT — Talk to any NPC
 <img width="2752" height="1536" alt="VoiceRT: a player talks to an NPC and hears it answer inside the game's mix" src="https://github.com/user-attachments/assets/f36324da-5850-4a02-802e-229865d464af" />
 
-**Real-time, interruptible voice for game NPCs. Unity + FMOD first. Runs on the player's GPU.**
+**Real-time, interruptible voice for game NPCs. Unity + FMOD first; speech recognition, the model and the voice run on the player's GPU. Source-available, all rights reserved.**
 
 The player holds a key and talks. The NPC answers in character, in its own voice, through an FMOD event in the game's own mix. Speech recognition, the language model and the voice all run locally: no API key, no per-turn bill.
 
