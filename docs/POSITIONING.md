@@ -6,7 +6,7 @@ Status: the sentence below is the mission statement from the AltaLab Day 1 pract
 
 > We help Unity game developers escape the cost, time, and localization limits of pre-recorded voice-over by shipping one FMOD-native, interruptible AI voice agent, so players can talk to any NPC and hear it answer live, in character, inside the game's own mix.
 
-What is true today, and what public copy says next to the sentence: the Unity package streams into a plain `AudioSource` **or** the FMOD programmer-instrument sink; both are compiled in Unity 6 (6000.6) and the FMOD path is verified live through a real microphone, fully local on one GPU. M1 has shipped. What stays un-exercised, and must keep saying so: the Unreal + Wwise glue. Speech recognition is English-only today (Whisper `small.en`), so "localization" is a direction, not a shipped feature.
+What is true today, and what public copy says next to the sentence: the Unity package streams into a plain `AudioSource` **or** the FMOD programmer-instrument sink; both are compiled in Unity 6 (6000.6) and the FMOD path is verified live through a real microphone, fully local on one GPU. M1 has shipped. What stays un-exercised, and must keep saying so: the Unreal plugin (never compiled inside an Editor) and Wwise (a documented contract, no plugin code). The Windows player build runs on the development machine only; its config still holds that machine's paths. Speech recognition is English-only today (Whisper `small.en`), so "localization" is a direction, not a shipped feature.
 
 ## Two surfaces
 

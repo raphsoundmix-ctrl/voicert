@@ -2,7 +2,7 @@
 
 The rule is simple: an AI voice has to be an ordinary voice. Same buses, attenuation curves, occlusion, reverb sends, ducking and voice limiting that the sound designer already set up. Anything else means keeping a second mix alive, and that is where AI dialogue starts to sound pasted on.
 
-**Status.** `voicert.game.sinks` defines the contract. The Unity package implements both the plain `AudioSource` path and the FMOD programmer-instrument sink, compiled in Unity 6 (6000.6) with FMOD for Unity 2.03.14 and verified live through a real microphone. The Unreal plugin's Wwise glue follows the documented API shape but has not been exercised inside an Editor.
+**Status.** `voicert.game.sinks` defines the contract. The Unity package implements both the plain `AudioSource` path and the FMOD programmer-instrument sink, compiled in Unity 6 (6000.6) with FMOD for Unity 2.03.14 and verified live through a real microphone. The Unreal plugin plays through `USoundWaveProcedural` and has not been compiled inside an Editor. The Wwise section below is a documented contract: there is no Wwise plugin code in the repository yet.
 
 ## FMOD (Unity first)
 

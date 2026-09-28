@@ -57,7 +57,7 @@
       </p>
       <div class="chips">
         <span class="chip">M1 shipped · <b>Unity 6 + FMOD 2.03</b></span>
-        <span class="chip"><b>~0.5 s</b> from speech to reply voice (p50)</span>
+        <span class="chip"><b>~0.5 s</b> speech to voice, idle GPU (p50)</span>
         <span class="chip"><b>$0</b> per turn on the player's GPU</span>
         <span class="chip">AltaLab <b>Fall 2026</b> cohort</span>
       </div>
@@ -72,7 +72,7 @@
   <!-- ============ 1 · WHY NOW (change in the world) ============ -->
   <section id="why-now" class="section">
     <p class="eyebrow mono">Why now</p>
-    <h2>Voice models moved onto the player's GPU.</h2>
+    <h2>Language models moved onto the player's GPU.</h2>
     <p class="lead">
       In 2025 and 2026 shipped games started running language models inside the player's own
       machine, and generative AI became an ordinary line in a Steam release. The model is no longer
@@ -81,18 +81,18 @@
     <div class="stat-row">
       <div class="stat">
         <b>2B</b>
-        <span>parameters: the model PUBG Ally runs on the player's RTX GPU (8 GB or more).
-        inZOI's Smart Zoi runs a 0.5B one. Both shipped on-device.</span>
+        <span>parameters: the model PUBG Ally (in beta) runs on the player's RTX GPU, 8 GB or
+        more. inZOI's Smart Zoi shipped with a 0.5B one. Both run on-device.</span>
       </div>
       <div class="stat">
         <b>~1 in 5</b>
-        <span>new Steam releases in 2025 disclosed generative AI; 7,818 titles in all, about 7% of
-        the library (as of July 2025).</span>
+        <span>Steam releases in 2025 disclosed generative AI, just under 20% to mid-July; 7,818
+        titles in all, about 7% of the library.</span>
       </div>
       <div class="stat accent">
         <b>10×</b>
-        <span>faster than real time: the voice in VoiceRT's stack synthesizes at a real-time factor
-        of 0.07–0.11 on one RTX 4080, measured.</span>
+        <span>faster than real time: Kokoro, the voice model VoiceRT runs, measured at a real-time
+        factor of 0.07–0.11 on one idle RTX 4080 (fp32, v1.1 benchmark).</span>
       </div>
     </div>
     <p class="source mono">Sources: NVIDIA (PUBG Ally, inZOI) · Totally Human (Steam disclosures) · VoiceRT measurements — <a href="#sources">full list</a></p>
@@ -116,8 +116,8 @@
       <div class="card">
         <h3>Cloud voice turns success into a bill</h3>
         <p>Speech synthesis is about <b>90%</b> of a cloud voice turn. Every player who talks costs the
-        studio money, so a hit becomes a growing invoice. A game designer who reviewed an early build
-        put it plainly: <i>"sold a game for $10, player burned $15 of tokens."</i></p>
+        studio money, so a hit becomes a growing invoice. A game designer put it plainly:
+        <i>"sold a game for $10, player burned $15 of tokens."</i></p>
       </div>
       <div class="card">
         <h3>A voice outside the mix sounds pasted on</h3>
@@ -157,13 +157,13 @@
     <div class="grid3">
       <div class="card">
         <h3>Interruptible</h3>
-        <p>The player can cut in mid-sentence. The NPC stops at once and remembers only what the player
-        actually heard, never the words that were cut.</p>
+        <p>The player can cut in mid-sentence. The NPC stops at once, and the reply that was cut is
+        dropped from its memory rather than remembered as finished.</p>
       </div>
       <div class="card">
         <h3>Stays in character</h3>
-        <p>Locked to the game's lore, with no tools outside the game engine to reach for. Told to "drop
-        the act", it answers in its own voice.</p>
+        <p>Locked to the game's lore, with no tools outside the game engine to reach for. The shipped
+        model held the role on 6 of 6 break-character probes.</p>
       </div>
       <div class="card">
         <h3>Remembers the player</h3>
@@ -177,8 +177,9 @@
       </div>
       <div class="card">
         <h3>Scales with what the player hears</h3>
-        <p>Only the NPC you are talking to runs the full pipeline. A market square of <b>240 NPCs</b>
-        holds at most <b>7</b> live voices; the rest bark or murmur.</p>
+        <p>Only the NPC you are talking to runs the full pipeline. In a simulated market square of
+        <b>240 NPCs</b>, dialogue LOD and the voice pool keep at most <b>7</b> on it; the rest bark,
+        murmur or stay silent.</p>
       </div>
       <div class="card">
         <h3>No bill per player</h3>
@@ -202,18 +203,18 @@
     <ul class="proof-list">
       <li><span class="tag ok mono">Verified</span><p>Runs inside <b>Unity 6 with FMOD for Unity 2.03.14</b>: a real microphone, a spoken question, an in-character spoken answer through the FMOD mix.</p></li>
       <li><span class="tag ok mono">Verified</span><p><b>Fully local on one RTX 4080</b>: Whisper, qwen3:8b, Kokoro. The server refuses to start if any stage falls back to the CPU.</p></li>
-      <li><span class="tag ok mono">Shipped</span><p>A <b>Windows player build</b> that starts its own voice server: no terminal, no Python for the player.</p></li>
-      <li><span class="tag ok mono">Measured</span><p><b>~0.5 s</b> from the end of the player's speech to the NPC's first audio (p50, n=10, editor idle); 0.85–1.1 s while the same GPU renders the game. Closing that gap is the next engineering target.</p></li>
-      <li><span class="tag ok mono">Tested</span><p><b>229</b> automated tests on the runtime and <b>21</b> on the Unity core, including interruption races over a real socket.</p></li>
+      <li><span class="tag ok mono">Built</span><p>A <b>Windows player build</b> that starts its own voice server, no terminal needed. It runs on the development machine; packaging it for other machines is not done yet.</p></li>
+      <li><span class="tag ok mono">Measured</span><p><b>~0.5 s</b> from the end of speech to the NPC's first audio (p50, n=10, scripted speech input, editor idle); 0.85–1.1 s while the same GPU renders the game, against a 300 ms budget. Closing that gap is the next engineering target.</p></li>
+      <li><span class="tag ok mono">Tested</span><p><b>229</b> automated tests on the runtime and <b>21</b> on the Unity core, including interruption races and barge-in over a real socket.</p></li>
       <li><span class="tag wip mono">In progress</span><p>Structured interviews with Unity developers. Sandbox and simulation games look like the strongest fit so far.</p></li>
-      <li><span class="tag no mono">Not yet</span><p>No customers or revenue: pre-release. English speech only. Unreal + Wwise not exercised in an Editor. Phones not benchmarked.</p></li>
+      <li><span class="tag no mono">Not yet</span><p>No customers or revenue: pre-release. English speech only. The Unreal plugin is not compiled in an Editor, and Wwise is a documented contract with no code yet. Phones not benchmarked.</p></li>
     </ul>
 
     <h3 class="sub-head">Roadmap</h3>
     <ul class="milestones">
       <li class="done"><b>M1</b>FMOD programmer-instrument sink in the Unity package, verified with a real microphone on the full local stack.</li>
       <li class="next"><b>M2</b><span class="tag mono">NEXT</span>A demo scene and a 30-second video: talk to an NPC, cut it off, come back and be remembered.</li>
-      <li><b>M3</b>Cloud models behind the same interfaces, for studios that want a bigger brain with the same local voice.</li>
+      <li><b>M3</b>Cloud providers behind the same interfaces, next to the local path, with the spending ceiling wired in.</li>
       <li><b>M4</b>Unity package 0.1 release; Unreal + Wwise at parity.</li>
     </ul>
     <p class="note">
@@ -227,8 +228,9 @@
     <p class="eyebrow mono">Market</p>
     <h2>A big engine, a narrow wedge.</h2>
     <p class="lead">
-      About half of new Steam games are made in Unity. We start narrower on purpose: Unity teams that
-      already mix through FMOD, beginning with sandbox and simulation games.
+      About half of the Steam games GameDiscoverCo scanned in 2025 were built in Unity. We start
+      narrower on purpose: Unity teams that already mix through FMOD, beginning with sandbox and
+      simulation games.
     </p>
     <div class="stat-row two">
       <div class="stat">
@@ -250,11 +252,11 @@
           <tr><th scope="col">Product</th><th scope="col">Where it runs</th><th scope="col">How it is billed</th><th scope="col">What it covers</th></tr>
         </thead>
         <tbody>
-          <tr><th scope="row">Convai</th><td>Vendor cloud</td><td>Monthly plan with an interaction quota</td><td>Character conversation; Unity plugin</td></tr>
-          <tr><th scope="row">Inworld AI</th><td>Vendor cloud</td><td>Prepaid usage credits; voice priced per million characters</td><td>Voice and AI APIs, after a 2025 pivot from its character engine</td></tr>
-          <tr><th scope="row">Charisma.ai</th><td>Vendor cloud</td><td>Prepaid credits per story event</td><td>Authored story conversations</td></tr>
+          <tr><th scope="row">Convai</th><td>Vendor cloud; on-premises for enterprise</td><td>Monthly plan with an interaction quota</td><td>Character conversation; Unity plugin</td></tr>
+          <tr><th scope="row">Inworld AI</th><td>Cloud APIs</td><td>Prepaid usage credits; voice priced per million characters</td><td>Voice and AI APIs, after a 2025 pivot from its character engine; Unity SDK in early access</td></tr>
+          <tr><th scope="row">Charisma.ai</th><td>Vendor cloud</td><td>Prepaid credits per story event</td><td>Authored story conversations; Unity SDK</td></tr>
           <tr><th scope="row">NVIDIA ACE</th><td>Cloud, or on-device plugins for Unreal (2026)</td><td>On-device plugins free, MIT</td><td>Speech, model and animation building blocks</td></tr>
-          <tr><th scope="row">ReadSpeaker speechEngine</th><td>On-device</td><td>One-time license per project</td><td>Text-to-speech only</td></tr>
+          <tr><th scope="row">ReadSpeaker speechEngine</th><td>On-device</td><td>One-time license per project</td><td>Text-to-speech only; Unity and Unreal, Wwise plugin</td></tr>
           <tr class="us"><th scope="row">VoiceRT</th><td>Player's GPU</td><td>Per-title license (planned)</td><td>The whole conversation, played through an FMOD event</td></tr>
         </tbody>
       </table>
@@ -271,8 +273,9 @@
     <p class="eyebrow mono">Business model</p>
     <h2>The voice costs nothing per player. So charge per game.</h2>
     <p class="lead">
-      Priced from measured usage against vendor rate cards: one NPC turn is 282 fresh and 700 cached
-      prompt tokens, 23 output tokens, 92 characters of speech and 3 s of player audio.
+      One NPC turn, priced against vendor rate cards: 282 fresh and 700 cached prompt tokens, 23
+      output tokens and 92 characters of speech (measured over 12 turns on a small local model), plus
+      an assumed 3 s of player audio.
     </p>
 
     <figure class="bars" aria-labelledby="bars-title">
@@ -317,8 +320,8 @@
     <div class="stat-row two">
       <div class="stat">
         <b>652</b>
-        <span>conversation turns per player an all-cloud stack can fund from a $10 game at a 90%
-        margin target.</span>
+        <span>conversation turns per player the cheapest all-cloud stack can fund from $10 net per
+        player at a 90% margin target.</span>
       </div>
       <div class="stat accent">
         <b>6,587</b>
@@ -336,8 +339,9 @@
       </div>
       <div class="card">
         <h3>A ceiling for studios that want the cloud</h3>
-        <p>A studio that swaps in a cloud model gets a spending ceiling enforced at runtime, like the
-        latency budget. Out of budget means an authored fallback line, never an error dialog.</p>
+        <p>For studios that will want a cloud model, the spending-ceiling ledger is already built and
+        tested: out of budget means an authored fallback line, never an error dialog. It goes into the
+        runtime together with the cloud providers (M3).</p>
       </div>
     </div>
   </section>
@@ -370,7 +374,7 @@
     <div class="author-note">
       <div class="author-kicker mono">WHY THIS TEAM</div>
       <p class="author-lead">
-        Built by people who mix game audio, not by a model vendor.
+        Built by sound and voice people, not by a model vendor.
       </p>
       <p class="author-body">
         Rafael has worked in sound and voice for more than ten years, and the design comes from the mix:
@@ -398,8 +402,8 @@
     <p class="eyebrow mono">The ask</p>
     <h2>Not raising yet.</h2>
     <p class="lead">
-      The prototype is live and verified end to end. We are validating with Unity developers before
-      any number goes on a round. What helps right now:
+      The prototype runs end to end on one machine, inside Unity and FMOD. We are validating with
+      Unity developers before any number goes on a round. What helps right now:
     </p>
     <div class="grid2 ask">
       <div class="card">

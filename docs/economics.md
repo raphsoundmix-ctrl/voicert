@@ -142,7 +142,7 @@ That is the right objection, and a one-time price against a per-use meter is a r
 python tools/unit_economics.py
 ```
 
-The turn is the measured one from [local-stack.md](local-stack.md): 282 fresh + 700 cached prompt tokens, 23 output tokens, 92 characters synthesized, 3 s of player audio.
+The turn is the measured one from [local-stack.md](local-stack.md): 282 fresh + 700 cached prompt tokens, 23 output tokens, 92 characters synthesized (measured on `qwen3:1.7b`), plus an assumed 3 s of player audio.
 
 | stack | per turn | LLM | STT | TTS | $15 buys |
 |---|---|---|---|---|---|

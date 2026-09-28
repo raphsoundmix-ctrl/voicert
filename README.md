@@ -46,10 +46,11 @@ This README is the engineering view: architecture, the wire protocol, what is me
 | Component | State | Evidence |
 |---|---|---|
 | Python runtime: pipeline, barge-in, NPC contract, memory, engine bridge, economics ledger | shipped | 229 pytest, mypy strict on 34 files, no API keys or GPU needed for CI |
-| Local GPU stack: Whisper `small.en` → `qwen3:8b` (Ollama) → Kokoro v1.0 fp32 (sherpa-onnx) | runs end to end | boot-time GPU gate; p50 **489 ms** end of speech → first audio (n=10, editor idle), **850–1100 ms** with the game rendering on the same GPU |
-| Unity package: FMOD programmer-instrument sink (M1) | shipped | compiled in Unity 6 (6000.6) with FMOD for Unity 2.03.14, heard through a real microphone, Windows player build |
+| Local GPU stack: Whisper `small.en` → `qwen3:8b` (Ollama) → Kokoro v1.0 fp32 (sherpa-onnx) | runs end to end | boot-time GPU gate; p50 **489 ms** end of speech → first audio (n=10, scripted speech input, editor idle), **850–1100 ms** with the game rendering on the same GPU |
+| Unity package: FMOD programmer-instrument sink (M1) | shipped | compiled in Unity 6 (6000.6) with FMOD for Unity 2.03.14, heard through a real microphone; a Windows player build runs on the development machine (its config still holds that machine's paths, so it is not packaged for other machines yet) |
 | Unity package: plain `AudioSource` sink | shipped | same build; 21 xUnit tests on the engine-agnostic C# core, including a full turn plus a barge-in against a live Python bridge |
-| Unreal plugin, Wwise glue | prototype | protocol verified in standalone C++; the Editor-side glue has never been exercised |
+| Unreal plugin (`USoundWaveProcedural` playback) | prototype | protocol verified in standalone C++; never compiled inside an Editor |
+| Wwise | documented contract only | `voicert.game.sinks` describes the Audio Input wiring (`UAkAudioInputComponent`); there is no plugin code for it yet |
 | Cloud adapters: Deepgram, Claude Haiku, OpenRouter, ElevenLabs, Cartesia | interface only | raise `NotImplementedError` until M3 |
 
 Limits, stated up front so nobody has to find them:
@@ -85,7 +86,7 @@ flowchart LR
     LLM -- "TEXT_OUT · TOOL → subtitles, gestures" --> NPC
 ```
 
-**Two processes, on purpose.** Everything heavy — VAD, STT, the LLM, TTS, the voice pool — stays in the Python process on the GPU. The engine gets a thin client: one socket per live NPC, PCM queued into an ordinary engine sound, text and tool calls forwarded to your MonoBehaviour. The engine never runs a model, so no model ever has to fit inside the 16.6 ms frame at 60 fps, and a model failure is a dropped socket rather than a crashed game. Unreal + Wwise is the same picture with `UAkAudioInputComponent` in the FMOD slot.
+**Two processes, on purpose.** Everything heavy — VAD, STT, the LLM, TTS, the voice pool — stays in the Python process on the GPU. The engine gets a thin client: one socket per live NPC, PCM queued into an ordinary engine sound, text and tool calls forwarded to your MonoBehaviour. The engine never runs a model, so no model ever has to fit inside the 16.6 ms frame at 60 fps, and a model failure is a dropped socket rather than a crashed game. The Unreal plugin is the same client in C++, playing through `USoundWaveProcedural`; a Wwise path (`UAkAudioInputComponent` in the FMOD slot) exists only as a documented contract so far.
 
 **Frames, not callbacks.** Everything moving through the runtime is an immutable frame (`AudioFrame`, `TextFrame`, `FunctionCallFrame`, `InterruptionFrame`, `EndFrame`). Processors (`STTService`, `LLMService`, `TTSService`) are joined by asyncio queues and only ever see frames, so a provider is one ~50-line class and the core never changes. The core is stdlib-only asyncio; local models and cloud SDKs are optional extras. Internals: [docs/architecture.md](docs/architecture.md).
 
@@ -122,8 +123,8 @@ VAD: speech_start
 
 Three details carry most of the weight:
 
-- **History keeps what the player heard.** The LLM may have written 400 characters while TTS voiced 90. Only those 90 enter history (`mark_spoken()` only moves forward, so a late progress report cannot stretch it). The NPC profile goes further and drops the interrupted reply entirely: cleaner lore, shorter prompt.
-- **Cut what is playing, not what is running.** Kokoro synthesizes about ten times faster than the words are spoken, so a nine-second reply is fully generated in under a second — by the time the player interrupts, the pipeline is often idle and the engine still has seconds queued. The server flushes everything it has sent since the last cut; the client drops its ring buffer on `FLUSH`.
+- **History keeps what was voiced.** The LLM may have written 400 characters while TTS voiced 90. Only those 90 enter history (`mark_spoken()` only moves forward, so a late progress report cannot stretch it). The NPC profile goes further and drops the interrupted reply entirely: cleaner lore, shorter prompt.
+- **Cut what is playing, not what is running.** Kokoro synthesizes about ten times faster than the words are spoken, so a nine-second reply is fully generated in under a second — by the time the player interrupts, the pipeline is often idle and the engine still has seconds queued. The server flushes everything it has sent since the last cut; the client drops its ring buffer on `FLUSH`. **Known gap:** the client does not report how much it has played, so after a late cut like this the character's memory still holds the whole reply that was sent, not only the part the player heard.
 - **The tail FMOD already decoded.** FMOD reads ahead `decodeBufferSamples` (1024 by default, 64 ms at 16 kHz) that a flush cannot reach. `hardCutOnFlush` restarts the event to discard it, at the cost of an event restart.
 
 The race cases are tested, not assumed (`tests/test_interruption.py`): a cut mid-generation, a cut while TTS is streaming with no audio frame allowed through afterwards, two cuts fired at once (exactly one wins, no deadlock, the next turn still works), and the VAD gate telling a short "uh-huh" from a real interruption.
@@ -201,7 +202,7 @@ Per live NPC the audio costs ~32 KB/s of PCM16 at 16 kHz in each direction (48 K
 | **VoiceRT NPC** | One per character. Holds the bridge connection (`host`, `port`, `npcId`, `character`, `voice`) and raises `onSubtitle`, `onTool`, `onTurnEnd`, `onFlush`, `onState`, `onTranscript`, `onReady`, `onError`. `Say(text)` drives a typed turn. |
 | **VoiceRT FMOD Sink** | Creates and owns one `EventInstance` from an `EventReference` whose only instrument is a programmer instrument, and feeds it from the ring buffer. Compiled only when FMOD for Unity is in the project: `Editor/VoiceRTFmodDefine.cs` sets `VOICERT_FMOD`, and the `VoiceRT.Fmod` assembly is constrained on it. |
 | **VoiceRT AudioSource Sink** | The no-middleware path: a streaming `AudioClip` on an ordinary `AudioSource`. |
-| **VoiceRT Voice Input** | One per player, not per NPC; the game points it at whoever is being spoken to and calls `BeginUtterance()` / `EndUtterance()` from its own input system. Push-to-talk by default: with an open mic the VAD hears the NPC through the speakers and interrupts itself. Backends behind `IVoiceRTMicSource`: FMOD Core record (primary), `UnityEngine.Microphone` (fallback). A 10 s loop buffer with overrun detection keeps a stalled frame from handing over stale audio. |
+| **VoiceRT Voice Input** | One per player, not per NPC; the game points it at whoever is being spoken to and calls `BeginUtterance()` / `EndUtterance()` from its own input system. Push-to-talk by default: with an open mic the VAD hears the NPC through the speakers and interrupts itself. Backends behind `IVoiceRTMicSource`: FMOD Core record (primary), `UnityEngine.Microphone` (fallback). A loop buffer (5 s on FMOD, 10 s on the Unity fallback) with overrun detection keeps a stalled frame from handing over stale audio. |
 | **VoiceRT Dialogue LOD** | Distance tiers with hysteresis (LIVE 6/9 m, BARK 25/32 m, CROWD 60/75 m by default) and a conversation override; opens and closes the socket as the player crosses the LIVE band. |
 
 `Tools~/MicCheck` is a standalone device checker for the case the capture code was built around: the default Windows microphone is often a virtual endpoint that records silence, or a physical one another process holds (`ERR_RECORD`). The runtime walks past both on its own; MicCheck shows you why.
@@ -255,8 +256,8 @@ All on the reference workstation (RTX 4080 16 GB, i9-12900K, Windows 11). Method
 
 | What | Result |
 |---|---|
-| End of speech → first NPC audio, full local stack | p50 **489 ms** (n=10, editor idle) · **850–1100 ms** with the game rendering on the same GPU |
-| Kokoro fp32 on CUDA | RTF **0.07–0.11**, first chunk 175 ms / 91 ms (1.6 s / 5 s sentence); int8 on CUDA is RTF 1.85 because the quantized ops round-trip through the CPU, so use fp32 on the GPU |
+| End of speech → first NPC audio, full local stack | p50 **489 ms** (n=10, scripted speech input via `examples/npc_voice_probe.py`, editor idle) · **850–1100 ms** with the game rendering on the same GPU |
+| Kokoro fp32 on CUDA (v1.1 benchmark, idle GPU; the stack ships v1.0) | RTF **0.07–0.11**, first chunk 175 ms / 91 ms (1.6 s / 5 s sentence); int8 on CUDA is RTF 1.85 because the quantized ops round-trip through the CPU, so use fp32 on the GPU |
 | Whisper `small.en` vs `base.en` | **4.6 %** vs 12.0 % word error over ten spoken lines, for +27 ms and +400 MiB; `base.en` heard "Who is Elon Musk?" as "Who is a lawn musk?" |
 | Holding the character (six probes against the guard persona) | `qwen3:1.7b` 3/6 · `qwen3:4b` 2/6 · `qwen3:8b` **6/6** at 5.6 GB VRAM |
 | Local LLM latency (12-turn tavern keeper) | `qwen3:1.7b` warm TTFT 45 ms, full reply ~121 ms · `qwen3:14b` TTFT ~41 ms, full reply ~710 ms: decode speed separates models, not TTFT |
@@ -286,13 +287,13 @@ PLAYER WALKS 40 m ACROSS THE SQUARE
   step 4: live= 32  bark= 43  crowd= 68  off= 97  | agents held: 7  ← capped
 ```
 
-`live=` is how many NPCs qualify for the LIVE tier; `agents held:` is how many got a pool slot. Details, hysteresis and bake-vs-generate: [docs/economics.md](docs/economics.md#four-tiers-and-only-one-of-them-is-expensive).
+`live=` is how many NPCs qualify for the LIVE tier; `agents held:` is how many got a pool slot. This is the simulation: the pool and the BARK/CROWD tiers are implemented and tested in `voicert.game`, but the bridge server does not use the pool yet — it caps concurrent NPC sessions with `--max-sessions` (8 by default), and the Unity `VoiceRT Dialogue LOD` component opens and closes sockets by distance. Details, hysteresis and bake-vs-generate: [docs/economics.md](docs/economics.md#four-tiers-and-only-one-of-them-is-expensive).
 
 ---
 
 ## Economics
 
-`voicert.economics` prices a turn from measured usage against vendor rate cards read on 2026-08-31 (`python tools/unit_economics.py`). The turn: 282 fresh + 700 cached prompt tokens, 23 output tokens, 92 characters synthesized, 3 s of player audio.
+`voicert.economics` prices a turn against vendor rate cards read on 2026-08-31 (`python tools/unit_economics.py`). The turn: 282 fresh + 700 cached prompt tokens, 23 output tokens and 92 characters synthesized, measured over a 12-turn conversation on `qwen3:1.7b`, plus an assumed 3 s of player audio. The tool flags two of the rates as promotional.
 
 | stack | per turn | LLM | STT | TTS | $15 buys |
 |---|---|---|---|---|---|
@@ -302,7 +303,7 @@ PLAYER WALKS 40 m ACROSS THE SQUARE
 | premium brain, local voice | $0.000707 | 66.1% | 33.9% | 0% | 21,216 turns |
 | fully on-device (what the demo runs) | $0.000000 | 0% | 0% | 0% | unbounded |
 
-Speech synthesis is ~90% of a cloud voice turn; the LLM is under 2%. At $10 net per player and a 90% margin target, all-cloud funds 652 turns; moving only synthesis on-device funds 6,587. When a cloud stage is used, the ceiling is enforced at runtime: money is integer nano-dollars, the ledger reserves before a turn and settles after it (safe under concurrency), `BudgetDenied` carries an affordable authored fallback line, and barge-in stops the meter. Full argument and caveats: [docs/economics.md](docs/economics.md).
+Speech synthesis is ~90% of a cloud voice turn; the LLM is under 2%. At $10 net per player and a 90% margin target, the cheapest all-cloud stack funds 652 turns; moving only synthesis on-device funds 6,587. For cloud stages there is a spending-ceiling ledger, built and tested but not yet wired into the bridge (it goes in with the cloud providers, M3): money is integer nano-dollars, the ledger reserves before a turn and settles after it (safe under concurrency), `BudgetDenied` carries an affordable authored fallback line, and barge-in stops the meter. Full argument and caveats: [docs/economics.md](docs/economics.md).
 
 ---
 
@@ -356,9 +357,9 @@ C#: `dotnet test integrations/unity/tests/VoiceRT.Core.Tests`, **21 passed**, co
 ## Roadmap
 
 - [x] Core runtime, barge-in with history repair, the NPC contract, game layer, TCP engine bridge, economics ledger.
-- [x] **M1** FMOD programmer-instrument sink, compiled in Unity 6 with FMOD for Unity 2.03.14, verified with a real microphone on the full local stack; a Windows player build starts its own server.
+- [x] **M1** FMOD programmer-instrument sink, compiled in Unity 6 with FMOD for Unity 2.03.14, verified with a real microphone on the full local stack; a Windows player build starts its own server on the development machine.
 - [ ] **M2** Demo scene in the repo and a 30-second video: mic → NPC → FMOD event, barge-in and memory on screen.
-- [ ] **M3** Cloud providers (Deepgram, Claude Haiku, ElevenLabs Flash) running end to end behind the same adapters, next to the local path that already does.
+- [ ] **M3** Cloud providers (Deepgram, Claude Haiku, ElevenLabs Flash) running end to end behind the same adapters, next to the local path that already does, with the spending ceiling wired in.
 - [ ] **M4** UPM 0.1 release; Unreal + Wwise at parity.
 
 ---

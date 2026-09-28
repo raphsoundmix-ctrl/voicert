@@ -25,7 +25,7 @@ flowchart LR
     LLM -- "TEXT_OUT · TOOL → subtitles, gestures" --> NPC
 ```
 
-Unreal + Wwise is the same picture with `UAkAudioInputComponent` in the FMOD slot.
+The Unreal plugin is the same client in C++, playing through `USoundWaveProcedural`. A Wwise path would put `UAkAudioInputComponent` in the FMOD slot; so far that exists only as the documented contract in `voicert.game.sinks`, with no plugin code.
 
 ### Engine bridge
 
