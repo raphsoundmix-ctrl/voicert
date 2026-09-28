@@ -14,6 +14,7 @@ from tests.conftest import (
     wait_for_first_audio,
     wait_until_quiet,
 )
+from voicert.config import ConfigFactory
 from voicert.frames import InterruptionReason
 
 
@@ -121,6 +122,39 @@ async def test_vad_gate_sustained_speech_interrupts(annotated_runtime):
     assert len(interruption_frames(annotated_runtime)) == 1
     turn = next(t for t in annotated_runtime.state.turns if t.role == "assistant")
     assert turn.interrupted
+
+
+async def test_annotated_policy_tells_the_model_it_was_cut(annotated_runtime):
+    await annotated_runtime.say("Tell me a long story about the river")
+    await wait_for_first_audio(annotated_runtime)
+    await annotated_runtime.interruption.interrupt()
+    await wait_until_quiet(annotated_runtime)
+
+    messages = annotated_runtime.state.llm_messages(annotated_runtime.ctx.system_prompt)
+    assert any(
+        m["role"] == "assistant" and "[interrupted by user" in m["content"] for m in messages
+    )
+
+
+async def test_stock_npc_cuts_instantly_and_forgets_the_cut_reply():
+    """The profile that ships: a 0 ms gate and the DROP context policy."""
+    runtime = ConfigFactory.build("npc", llm_token_delay=0.02)
+    await runtime.start()
+    try:
+        await runtime.say("Tell me a long story about the harbour")
+        await wait_for_first_audio(runtime)
+
+        runtime.interruption.on_user_speech_start()   # no speech_end: a real cut
+        await asyncio.sleep(0.05)                     # well under the 120 ms variant's gate
+        assert len(interruption_frames(runtime)) == 1
+
+        await wait_until_quiet(runtime)
+        messages = runtime.state.llm_messages(runtime.ctx.system_prompt)
+        roles = [m["role"] for m in messages]
+        assert "user" in roles
+        assert "assistant" not in roles, "DROP: the cut reply never reaches the model"
+    finally:
+        await runtime.stop()
 
 
 async def test_interrupt_when_agent_silent_is_noop(annotated_runtime):

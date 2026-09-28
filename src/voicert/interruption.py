@@ -21,7 +21,7 @@ tasks the Pipeline spawns, rather than a hand-rolled cancel-token flag:
 Sequencing on user speech during agent playback::
 
     VAD speech-start
-      └─ policy gate (min_speech_ms per profile — "угу" must not kill a pitch)
+      └─ policy gate (min_speech_ms per profile; the NPC's is 0 ms)
           └─ pipeline.interrupt()      # cancel work -> drain queues -> notify
               └─ state.interrupt_assistant(turn)   # keep only the SPOKEN prefix
                   └─ metrics.turn_interrupted(turn)
@@ -46,8 +46,9 @@ class InterruptionPolicy:
     """Per-profile barge-in aggressiveness.
 
     ``min_speech_ms`` — how long the user must be speaking before we cut
-    the agent. Sales tolerates back-channel ("угу", "ага") without
-    dropping the pitch; NPC cuts instantly for game feel.
+    the agent. The NPC cuts instantly (0 ms) for game feel; a character
+    that should let a short back-channel ("uh-huh") pass without stopping
+    can raise it.
     """
 
     min_speech_ms: int = 100

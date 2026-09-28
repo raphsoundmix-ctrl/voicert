@@ -18,14 +18,17 @@ The engine transport (one TCP socket per live NPC) is
 ``voicert.game.bridge``; offline builds default to ``LoopbackTransport``.
 ``ConfigFactory.build`` also takes a ``ProfileConfig`` directly, so a game
 can derive a character (``dataclasses.replace``) without registering it.
+The contract holds by convention there: replace the character fields
+(``name``, ``prompt_vars``), not the tools, gate or budgets.
 Tool isolation is enforced by construction and by tests, not by asking the
 model nicely.
 """
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Literal
 
 from voicert.context import RuntimeContext
@@ -83,7 +86,12 @@ class ProfileConfig:
     vad: VADConfig = VADConfig()
     interruption: InterruptionPolicy = InterruptionPolicy()
     context_policy: ContextPolicy = ContextPolicy.KEEP_ANNOTATED
-    prompt_vars: dict[str, str] = field(default_factory=dict)
+    prompt_vars: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # dataclasses.replace hands the parent's mapping over by reference; a
+        # read-only copy keeps a derived character from editing the stock NPC.
+        object.__setattr__(self, "prompt_vars", MappingProxyType(dict(self.prompt_vars)))
 
     def render_prompt(self) -> str:
         return self.system_prompt.format(**self.prompt_vars) if self.prompt_vars else self.system_prompt

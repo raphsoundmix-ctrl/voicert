@@ -9,10 +9,11 @@ from voicert.interruption import InterruptionPolicy
 from voicert.state import ContextPolicy
 from voicert.transport import LoopbackTransport
 
-#: The NPC profile with the two knobs the barge-in tests need turned: a
-#: 120 ms VAD gate (so a short back-channel can be told apart from a real
-#: interruption) and KEEP_ANNOTATED (so the cut turn stays in history and
-#: its spoken prefix can be inspected). The NPC itself ships 0 ms and DROP.
+#: The NPC profile with two knobs turned, to cover the paths the stock NPC
+#: never takes: a 120 ms VAD gate (so a short back-channel can be told apart
+#: from a real interruption) and KEEP_ANNOTATED (the cut reply stays in the
+#: model's context, marked as interrupted). The stock NPC — 0 ms and DROP —
+#: has its own test in test_interruption.py.
 ANNOTATED_NPC: ProfileConfig = replace(
     PROFILES["npc"],
     name="npc-annotated",
