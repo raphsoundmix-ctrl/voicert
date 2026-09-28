@@ -1,16 +1,16 @@
-"""Provider adapter skeletons — the seams where real models plug in.
+"""Cloud provider adapter skeletons — the seams where hosted models plug in.
 
-Deliberately not implemented yet (модели подключаются позже): each class
-documents its wire protocol, env var, and target latency so wiring a
-provider is a mechanical ~50-line diff against a stable interface, with
-zero changes to the core pipeline.
+Not implemented yet (milestone M3): each class documents its wire protocol,
+env var, and target latency so wiring a provider is a mechanical ~50-line
+diff against a stable interface, with zero changes to the core pipeline.
+The local providers that the Unity demo runs today live in
+``voicert.processors.local`` (faster-whisper, Ollama, Kokoro via sherpa-onnx).
 
 Planned matrix (latency figures = vendor-published p50 for streaming):
 
     STT   Deepgram Nova-3 (ws stream, ~150 ms interim)   DEEPGRAM_API_KEY
-          faster-whisper local (GPU, offline fallback)   —
-    LLM   Anthropic Claude (Haiku for NPC, Sonnet+)      ANTHROPIC_API_KEY
-          OpenAI GPT-4.1-mini / OpenRouter any-model     OPENAI_API_KEY / OPENROUTER_API_KEY
+    LLM   Anthropic Claude (Haiku for the NPC)           ANTHROPIC_API_KEY
+          OpenRouter, any model behind one key           OPENROUTER_API_KEY
     TTS   ElevenLabs Flash v2.5 (~75 ms TTFB)            ELEVENLABS_API_KEY
           Cartesia Sonic (~90 ms TTFB, ws stream)        CARTESIA_API_KEY
 """
@@ -48,23 +48,9 @@ class DeepgramSTT(STTService):
         yield  # pragma: no cover
 
 
-class WhisperLocalSTT(STTService):
-    """faster-whisper on local GPU — offline fallback, no network, no key.
-    Higher latency than Deepgram streaming; fine for assistant profile."""
-
-    name = "stt-whisper-local"
-
-    async def transcribe(self, frame: AudioFrame) -> AsyncIterator[TextFrame]:
-        raise NotImplementedError(
-            "WhisperLocalSTT: pip install voicert[vad] + faster-whisper, then implement."
-        )
-        yield  # pragma: no cover
-
-
 class AnthropicLLM(LLMService):
-    """Claude via Messages API streaming. Profile mapping: NPC -> Haiku
-    (latency), Sales/Assistant -> Sonnet. Tools pass through as
-    FunctionCallFrame."""
+    """Claude via Messages API streaming; Haiku for the NPC (first token
+    inside the 150 ms budget). Tools pass through as FunctionCallFrame."""
 
     name = "llm-anthropic"
 
@@ -87,7 +73,7 @@ class OpenRouterLLM(LLMService):
 
 class ElevenLabsTTS(TTSService):
     """ElevenLabs Flash v2.5 websocket streaming — lowest published TTFB,
-    first choice for the NPC profile."""
+    first cloud choice for the NPC."""
 
     name = "tts-elevenlabs"
 

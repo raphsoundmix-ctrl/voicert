@@ -1,23 +1,25 @@
-"""ConfigFactory — Rapida-inspired profile assembly.
+"""ConfigFactory — builds a wired NPC runtime from a character profile.
 
-One entry point builds a complete, wired agent for one of three *strict*
-profiles. Strict means the profiles differ structurally, not just by
-prompt text:
+A profile is a contract, not a prompt. The NPC profile fixes:
 
-=============  ==================  =====================  ==================
-axis           sales               assistant              npc
-=============  ==================  =====================  ==================
-transport      SIP/Twilio          WebRTC                 WebRTC + game link
-tools          CRM-only            web/calendar/IoT/OS    game-engine-only
-barge-in gate  250 ms (back-       120 ms                 0 ms (instant cut,
-               channel tolerant)                          game feel)
-interrupted    kept, annotated     kept, annotated        dropped (lore +
-context        (objection signal)                         prompt minimalism)
-TTFB budget    1000 ms             800 ms                 300 ms
-=============  ==================  =====================  ==================
+==============  ==========================================================
+axis            npc
+==============  ==========================================================
+tools           game engine only: emit_game_event, query_world_state,
+                play_animation. Anything else raises PermissionError.
+barge-in gate   0 ms: the cut is instant, because game feel beats politeness
+interrupted     dropped from history: lore consistency and a short prompt
+reply
+latency         first LLM token 150 ms, first audio 300 ms, both measured
+                from the end of the player's speech (see voicert.metrics)
+==============  ==========================================================
 
-Tool isolation is enforced by construction (disjoint registries) and by
-tests — not by asking the model nicely.
+The engine transport (one TCP socket per live NPC) is
+``voicert.game.bridge``; offline builds default to ``LoopbackTransport``.
+``ConfigFactory.build`` also takes a ``ProfileConfig`` directly, so a game
+can derive a character (``dataclasses.replace``) without registering it.
+Tool isolation is enforced by construction and by tests, not by asking the
+model nicely.
 """
 
 from __future__ import annotations
@@ -33,49 +35,10 @@ from voicert.metrics import LatencyBudget, TTFBTracker
 from voicert.pipeline import FrameProcessor, Pipeline
 from voicert.processors.stubs import StubLLM, StubSTT, StubTTS, make_user_audio
 from voicert.state import ContextPolicy, StateContextManager
-from voicert.tools import ToolRegistry, assistant_tools, npc_tools, sales_tools
-from voicert.transport import (
-    BaseTransport,
-    EnergyVAD,
-    LoopbackTransport,
-    SipTwilioTransport,
-    VADConfig,
-    WebRTCTransport,
-)
+from voicert.tools import ToolRegistry, npc_tools
+from voicert.transport import BaseTransport, EnergyVAD, LoopbackTransport, VADConfig
 
-ProfileName = Literal["sales", "assistant", "npc"]
-
-SALES_SYSTEM_PROMPT = """\
-You are a voice sales agent. You follow a strict conversation graph:
-greeting -> qualification -> pitch -> objection handling -> close.
-
-Rules:
-- Maintain deal context at all times: name, company, stage, budget, timeline.
-  Update the CRM through tools after every material fact.
-- An objection is not a rejection. Work the technique (acknowledge -> clarify
-  -> respond -> confirm) and log it in the CRM (crm_log_objection).
-- If the customer interrupts you, they said something important. Stop
-  immediately, listen, and answer THEIR point — never resume your pitch.
-- Keep sentences short: this is telephony, and monologues kill conversion.
-- Never invent prices or terms — CRM data only. If the data is missing,
-  clarify and offer schedule_callback or transfer_to_human.
-"""
-
-ASSISTANT_SYSTEM_PROMPT = """\
-You are a personal voice assistant in the Jarvis style: calm, precise,
-lightly witty, on a first-name basis with your principal.
-
-Rules:
-- Open-domain conversation, but answers stay concise — this is voice,
-  not an essay.
-- Use tools aggressively: search, calendar, memory, IoT, applications.
-  Never answer "I don't know" when a tool can find out.
-- Personalize: store preferences (memory_store) and recall context
-  (memory_recall) before asking your principal twice.
-- Irreversible actions (deletion, purchases, sending messages) require
-  explicit spoken confirmation first.
-- If you are interrupted, the new input outranks your unfinished thought.
-"""
+ProfileName = Literal["npc"]
 
 SPOKEN_STYLE = """\
 You are heard, not read. Every word is spoken aloud a fraction of a second
@@ -112,10 +75,10 @@ Hard guardrails:
 
 @dataclass(frozen=True, slots=True)
 class ProfileConfig:
-    name: ProfileName
+    #: Label for logs, metrics and state: the stock profile or a derived character.
+    name: str
     system_prompt: str
     tools_factory: Callable[[], ToolRegistry] = field(repr=False)
-    transport_cls: type[BaseTransport] = LoopbackTransport
     latency_budget: LatencyBudget = LatencyBudget(1000, 500, 800)
     vad: VADConfig = VADConfig()
     interruption: InterruptionPolicy = InterruptionPolicy()
@@ -127,31 +90,10 @@ class ProfileConfig:
 
 
 PROFILES: dict[str, ProfileConfig] = {
-    "sales": ProfileConfig(
-        name="sales",
-        system_prompt=SALES_SYSTEM_PROMPT,
-        tools_factory=sales_tools,
-        transport_cls=SipTwilioTransport,
-        latency_budget=LatencyBudget(total_ms=1000, llm_first_token_ms=500, tts_first_audio_ms=800),
-        vad=VADConfig(sensitivity=0.6, hangover_ms=400),
-        interruption=InterruptionPolicy(min_speech_ms=250),
-        context_policy=ContextPolicy.KEEP_ANNOTATED,
-    ),
-    "assistant": ProfileConfig(
-        name="assistant",
-        system_prompt=ASSISTANT_SYSTEM_PROMPT,
-        tools_factory=assistant_tools,
-        transport_cls=WebRTCTransport,
-        latency_budget=LatencyBudget(total_ms=800, llm_first_token_ms=400, tts_first_audio_ms=650),
-        vad=VADConfig(sensitivity=0.5, hangover_ms=300),
-        interruption=InterruptionPolicy(min_speech_ms=120),
-        context_policy=ContextPolicy.KEEP_ANNOTATED,
-    ),
     "npc": ProfileConfig(
         name="npc",
         system_prompt=NPC_SYSTEM_PROMPT,
         tools_factory=npc_tools,
-        transport_cls=WebRTCTransport,
         latency_budget=LatencyBudget(total_ms=300, llm_first_token_ms=150, tts_first_audio_ms=250),
         vad=VADConfig(sensitivity=0.7, hangover_ms=150),
         interruption=InterruptionPolicy(min_speech_ms=0),
@@ -225,22 +167,25 @@ class AgentRuntime:
 
 
 class ConfigFactory:
-    """Builds a ready-to-run AgentRuntime for a strict profile."""
+    """Builds a ready-to-run AgentRuntime for a profile."""
 
     @staticmethod
     def build(
-        profile: ProfileName | str,
+        profile: ProfileName | str | ProfileConfig,
         *,
         transport: BaseTransport | None = None,
         processors: list[FrameProcessor] | Callable[[RuntimeContext], list[FrameProcessor]] | None = None,
         llm_token_delay: float = 0.01,
     ) -> AgentRuntime:
-        try:
-            cfg = PROFILES[str(profile)]
-        except KeyError:
-            raise ValueError(
-                f"unknown profile {profile!r}; expected one of {sorted(PROFILES)}"
-            ) from None
+        if isinstance(profile, ProfileConfig):
+            cfg = profile
+        else:
+            try:
+                cfg = PROFILES[str(profile)]
+            except KeyError:
+                raise ValueError(
+                    f"unknown profile {profile!r}; expected one of {sorted(PROFILES)}"
+                ) from None
 
         tools = cfg.tools_factory()
         state = StateContextManager(cfg.name, policy=cfg.context_policy)
@@ -249,8 +194,8 @@ class ConfigFactory:
             state=state, metrics=metrics, tools=tools, system_prompt=cfg.render_prompt()
         )
 
-        # Tests/demo default to LoopbackTransport: profile transports that
-        # are still skeletons (SIP/WebRTC) must not block offline runs.
+        # Offline runs (tests, the demo) get an in-memory transport; the engine
+        # bridge passes its own per-socket transport in.
         active_transport = transport if transport is not None else LoopbackTransport(
             vad=EnergyVAD(cfg.vad)
         )

@@ -41,7 +41,11 @@ from voicert.transport import VADConfig
 
 logger = logging.getLogger("voicert.game.local_server")
 
-DEFAULT_TTS_DIR = Path(r"D:\VOICE RT\_shared\models\tts\kokoro-multi-lang-v1_0")
+#: Where the fp32 Kokoro model lives. ``VOICERT_TTS_DIR`` or ``--tts-dir``
+#: override it; the fallback is the reference workstation's layout.
+DEFAULT_TTS_DIR = Path(
+    os.environ.get("VOICERT_TTS_DIR", r"D:\VOICE RT\_shared\models\tts\kokoro-multi-lang-v1_0")
+)
 #: src/voicert/game/local_server.py -> repository root
 _REPO = Path(__file__).resolve().parents[3]
 DEFAULT_WORLD = _REPO / "examples" / "worlds" / "harbour-town.json"

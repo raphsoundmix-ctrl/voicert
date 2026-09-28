@@ -1,14 +1,15 @@
-"""voicert — real-time voice AI agent framework.
+"""voicert — real-time, interruptible voice for game NPCs.
 
-Architecture synthesis of three reference systems:
+The runtime behind one character asset: the player's microphone in, an
+in-character reply out, voiced into the game's own FMOD mix. The core is
+stdlib-only asyncio; local providers, the engine bridge and the economics
+ledger live in ``voicert.processors``, ``voicert.game`` and
+``voicert.economics``.
+
+Design references (studied, nothing ported):
   * Pipecat        -> frame/pipeline composition model
   * LiveKit Agents -> transport-level VAD + barge-in interruption handling
-  * Rapida AI      -> profile routing, state orchestration, latency metrics
-
-Three strict operating profiles are first-class citizens:
-  * ``sales``      — scripted phone agent (SIP/Twilio, CRM tools, objection handling)
-  * ``assistant``  — open-domain Jarvis-style assistant (WebRTC, web/IoT/OS tools)
-  * ``npc``        — game character (lore guardrails, lowest latency, game-engine link)
+  * Rapida AI      -> profile assembly, state orchestration, latency metrics
 """
 
 from voicert.config import AgentRuntime, ConfigFactory, ProfileConfig

@@ -5,15 +5,14 @@ detection. The core rule: VAD is **local** (no network round-trip) because
 barge-in latency is bounded by how fast we *notice* the user speaking.
 
 Shipping now: EnergyVAD (stdlib-only, deterministic, good enough for demo
-and tests) + LoopbackTransport. Skeletons with documented contracts:
-SileroVAD (ONNX), WebRTCTransport (aiortc), SipTwilioTransport (telephony
-for the sales profile).
+and tests) + LoopbackTransport. The engine-facing transport is the TCP
+bridge in ``voicert.game.bridge``. Skeleton with a documented contract:
+SileroVAD (ONNX).
 """
 
 from __future__ import annotations
 
 import asyncio
-import logging
 from array import array
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -21,8 +20,6 @@ from enum import Enum
 
 from voicert.frames import AudioFrame, Frame
 from voicert.utterance import UtteranceSegmenter
-
-logger = logging.getLogger("voicert.transport")
 
 
 class VADEvent(Enum):
@@ -77,8 +74,8 @@ class EnergyVAD:
         if not samples:
             return None
         rms = (sum(s * s for s in samples) / len(samples)) ** 0.5
-        # Hangover accounting must use the *actual* rate of this chunk, or
-        # 8 kHz telephony audio would look twice as long as it really is.
+        # Hangover accounting must use the *actual* rate of this chunk, or a
+        # chunk captured at another rate would be timed wrong.
         frame_ms = len(samples) / (sample_rate or self.sample_rate) * 1000.0
         if rms >= self._threshold:
             self._silence_ms = 0.0
@@ -243,33 +240,3 @@ class LoopbackTransport(BaseTransport):
         self.outbox.append(frame)
         if isinstance(frame, AudioFrame):
             self.first_audio.set()
-
-
-class WebRTCTransport(BaseTransport):
-    """aiortc-based WebRTC: Opus in/out, jitter buffer, DataChannel for
-    events. Default for assistant & npc profiles. ``pip install
-    voicert[webrtc]``. Skeleton until the transport milestone."""
-
-    name = "webrtc"
-
-    def __init__(self, vad: EnergyVAD | None = None) -> None:
-        super().__init__(vad)
-        logger.warning("WebRTCTransport is a documented skeleton — wire aiortc to go live.")
-
-    async def sink(self, frame: Frame) -> None:
-        raise NotImplementedError("WebRTCTransport: install voicert[webrtc] and implement.")
-
-
-class SipTwilioTransport(BaseTransport):
-    """Twilio Media Streams over websocket: 8 kHz μ-law both ways, DTMF
-    passthrough, <Connect><Stream> TwiML entrypoint. Default for the sales
-    profile. Skeleton until the telephony milestone."""
-
-    name = "sip-twilio"
-
-    def __init__(self, vad: EnergyVAD | None = None) -> None:
-        super().__init__(vad)
-        logger.warning("SipTwilioTransport is a documented skeleton — wire Twilio to go live.")
-
-    async def sink(self, frame: Frame) -> None:
-        raise NotImplementedError("SipTwilioTransport: wire Twilio Media Streams to go live.")

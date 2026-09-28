@@ -92,7 +92,9 @@ Cancellation uses `asyncio.Task.cancel()` rather than a hand-rolled flag. The ru
 
 Both latency numbers are deadlines measured from the same moment, the end of the player's speech, so they are not added together. `over_budget` in the logs fires when the first audio chunk misses the second one.
 
-The tool set is closed. Tests check this: even if a prompt injection tells the NPC to call a tool outside the engine, the tool is not in the registry and the call raises `PermissionError`. The guardrail is in the structure, not in the prompt. Other profiles exist in `ConfigFactory` only to prove tool sets cannot overlap; they are not on the roadmap.
+The tool set is closed. Tests check this: even if a prompt injection tells the NPC to call a tool outside the engine, the tool is not in the registry and the call raises `PermissionError`. The guardrail is in the structure, not in the prompt.
+
+A character is a derived profile, not a new one. `ConfigFactory.build` also takes a `ProfileConfig`, so a game gives each character its own prompt variables with `dataclasses.replace(PROFILES["npc"], name="guard", prompt_vars={...})` and keeps the tools, gate, budgets and context policy of the contract. The demo goes one step further and reads characters from a world file (`examples/worlds/harbour-town.json`, assembled by `voicert.game.agents`), so who a character is lives in data rather than code.
 
 ## Design references
 
@@ -108,13 +110,15 @@ None of them treats the NPC as a contract: a fixed latency budget (150 ms to the
 
 **Why Python and asyncio.** The voice-AI ecosystem lives in Python: Silero VAD, faster-whisper, every vendor SDK. A voice agent is almost pure I/O, and asyncio handles that cheaply. Most importantly, asyncio can cancel a task at any await point, and barge-in is built directly on that.
 
-The core has no external dependencies. It installs in seconds and there is very little to audit. The heavy pieces (aiortc, onnxruntime, httpx) are optional extras.
+The core has no external dependencies. It installs in seconds and there is very little to audit. The heavy pieces (faster-whisper, sherpa-onnx, onnxruntime, httpx) are optional extras.
 
 ---
 
-## Models: interfaces now, providers later
+## Models: the local path is live, cloud is an adapter away
 
-The pipeline currently runs on deterministic stubs, so the tests and the demo need no API keys. A real provider plugs in as an adapter against a stable interface. See `voicert/processors/adapters.py` for the skeletons.
+The Unity demo runs the local stack end to end on one GPU: Whisper `small.en` (faster-whisper, CUDA) → `qwen3:8b` via Ollama → Kokoro v1.0 fp32 via sherpa-onnx CUDA, with a boot-time gate that refuses to start if any stage fell back to the CPU. The measured numbers and the reasons for each choice are in [local-stack.md](local-stack.md). The test suite runs the same pipeline on deterministic stubs, so CI needs no keys and no GPU.
+
+Cloud providers plug in as adapters against the same `STTService` / `LLMService` / `TTSService` interfaces. `voicert/processors/adapters.py` holds the skeletons; none is wired to a live key yet (milestone M3).
 
 | Stage | First choice | Alternative | Why |
 |---|---|---|---|
@@ -134,16 +138,24 @@ src/voicert/
   pipeline.py          # Pipeline + FrameProcessor: queues, pumps, the barge-in machinery
   interruption.py      # InterruptionManager: VAD gate, task cancellation, history repair
   state.py             # StateContextManager: history, spoken prefix, context policies
-  config.py            # ConfigFactory: the NPC profile (prompt, tools, budgets); other profiles kept only to prove tool isolation
-  tools.py             # tool registries; the NPC's is engine-only and a prompt cannot widen it
+  config.py            # ConfigFactory: the NPC profile (prompt, tools, gate, budgets, context policy)
+  tools.py             # the NPC tool registry: engine-only, a prompt cannot widen it
   context.py           # RuntimeContext: the shared bus between processors
   metrics.py           # TTFBTracker: per-stage latency, structured JSON logs
-  transport.py         # EnergyVAD (stdlib), SileroVAD skeleton, the utterance-segmenter hook
+  transport.py         # EnergyVAD (stdlib), SileroVAD skeleton, loopback transport, the utterance-segmenter hook
+  utterance.py         # UtteranceSegmenter: pre-roll, minimum length, force-flush
+  qos.py               # Windows scheduling: P-core pinning, power throttling off, priority
   processors/
     base.py            # STTService / LLMService / TTSService contracts
     stubs.py           # deterministic offline providers for tests and the demo
-    adapters.py        # skeletons: Deepgram / Whisper / Anthropic / OpenRouter / ElevenLabs / Cartesia
+    local.py           # WhisperSTT (faster-whisper), OllamaLLM + SentenceBuffer, SherpaOnnxTTS (Kokoro)
+    adapters.py        # cloud skeletons: Deepgram / Anthropic / OpenRouter / ElevenLabs / Cartesia (M3)
   game/
+    bridge.py          # EngineBridgeServer: the TCP wire protocol, one socket per live NPC
+    local_server.py    # the bridge served by the local GPU stack, GPU gate, VOICERT READY line
+    local_stack.py     # Whisper and Kokoro loaded once and shared across NPC sessions
+    agents.py          # characters from a world file + memory per (NPC, player)
+    session.py         # per-NPC state machine: idle / listening / processing / speaking
     lod.py             # dialogue LOD: LIVE / BARK / CROWD / OFF with hysteresis
     pool.py            # fixed-size agent pool with priority eviction
     sinks.py           # FMOD programmer-sound and Wwise Audio Input contracts
@@ -154,9 +166,13 @@ src/voicert/
     usage.py           # what a turn consumed -> what it costs (pure)
     ledger.py          # reserve / settle / abandon, degrade instead of fail
     planning.py        # affordable turns, required local share, ceiling from revenue
-tests/                 # 228 tests: pipeline, barge-in races, turn boundaries, tool isolation, game layer, cost ceilings
-examples/              # run_demo.py (voice loop) and game_open_world.py (240-NPC square)
+tests/                 # pytest: pipeline, barge-in races, turn boundaries, tool isolation, agents and memory, bridge, game layer, cost ceilings
+integrations/unity/    # com.voicert.npc UPM package (FMOD sink, mic backends, LOD) + C# xUnit tests
+integrations/unreal/   # VoiceRT .uplugin + standalone C++ protocol tests
+examples/              # run_demo.py (stub voice loop), game_open_world.py (240-NPC square), npc_chat.py,
+                       # run_local_npc.py, npc_voice_probe.py, stt_bench.py, resmon.py (local-stack probes)
 tools/                 # unit_economics.py — prints the cost table from measured usage
+docker/, Dockerfile    # the bridge as a container (stub and Ollama-backed profiles); voicert.ps1 wraps compose
 docs/                  # site (index.html, app.js, styles.css) + architecture / economics / licensing / middleware-wiring / audio-chain / local-stack
 ```
 

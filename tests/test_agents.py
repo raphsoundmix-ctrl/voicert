@@ -321,7 +321,7 @@ def test_an_interrupted_line_is_not_replayed_as_a_finished_one(tmp_path):
     assert dropping.add_history(memory.transcript) == 3
     assert all("shut" not in t.text for t in dropping.turns)
 
-    keeping = StateContextManager("assistant", policy=ContextPolicy.KEEP_ANNOTATED)
+    keeping = StateContextManager("npc-annotated", policy=ContextPolicy.KEEP_ANNOTATED)
     assert keeping.add_history(memory.transcript) == 4
     assert any(t.interrupted for t in keeping.turns)
 

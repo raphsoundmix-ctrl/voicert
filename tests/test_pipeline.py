@@ -10,23 +10,23 @@ from voicert.pipeline import Pipeline
 from voicert.processors.stubs import make_user_audio
 
 
-async def test_end_to_end_audio_roundtrip(assistant_runtime):
-    await assistant_runtime.say("Hi, tell me what you can do")
-    await wait_for_first_audio(assistant_runtime)
-    await wait_until_quiet(assistant_runtime)
+async def test_end_to_end_audio_roundtrip(annotated_runtime):
+    await annotated_runtime.say("Hi, tell me what you can do")
+    await wait_for_first_audio(annotated_runtime)
+    await wait_until_quiet(annotated_runtime)
 
-    audio = audio_frames(assistant_runtime)
+    audio = audio_frames(annotated_runtime)
     assert audio, "pipeline must emit agent audio for a user utterance"
     assert all(f.source == "agent" for f in audio)
     assert sum(len(f.pcm) for f in audio) > 0
 
 
-async def test_metrics_ttfb_recorded(assistant_runtime):
-    await assistant_runtime.say("Hello")
-    await wait_for_first_audio(assistant_runtime)
-    await wait_until_quiet(assistant_runtime)
+async def test_metrics_ttfb_recorded(annotated_runtime):
+    await annotated_runtime.say("Hello")
+    await wait_for_first_audio(annotated_runtime)
+    await wait_until_quiet(annotated_runtime)
 
-    report = assistant_runtime.metrics.report(1)
+    report = annotated_runtime.metrics.report(1)
     assert report["stt_final"] is not None
     assert report["llm_first_token"] is not None
     assert report["tts_first_audio"] is not None
@@ -34,15 +34,15 @@ async def test_metrics_ttfb_recorded(assistant_runtime):
     assert report["tts_first_audio"] >= report["llm_first_token"]
 
 
-async def test_state_history_after_turn(assistant_runtime):
-    await assistant_runtime.say("Remember: I like my coffee black")
-    await wait_for_first_audio(assistant_runtime)
-    await wait_until_quiet(assistant_runtime)
+async def test_state_history_after_turn(annotated_runtime):
+    await annotated_runtime.say("Remember: I like my coffee black")
+    await wait_for_first_audio(annotated_runtime)
+    await wait_until_quiet(annotated_runtime)
 
-    roles = [t.role for t in assistant_runtime.state.turns]
+    roles = [t.role for t in annotated_runtime.state.turns]
     assert roles[0] == "user"
     assert "assistant" in roles
-    assistant_turn = next(t for t in assistant_runtime.state.turns if t.role == "assistant")
+    assistant_turn = next(t for t in annotated_runtime.state.turns if t.role == "assistant")
     assert assistant_turn.final and not assistant_turn.interrupted
     assert len(assistant_turn.text) > 0
 
@@ -53,7 +53,7 @@ async def test_pipeline_rejects_empty_processor_list():
 
 
 async def test_push_before_start_raises():
-    runtime = ConfigFactory.build("assistant")
+    runtime = ConfigFactory.build("npc")
     with pytest.raises(RuntimeError):
         await runtime.pipeline.push(make_user_audio("test"))
 

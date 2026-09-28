@@ -20,11 +20,12 @@ from typing import Any
 class ContextPolicy(str, Enum):
     """What happens to an interrupted assistant turn in LLM context.
 
-    KEEP_ANNOTATED — keep spoken prefix, tag it as interrupted (sales:
-    an interrupted pitch is signal — usually an objection incoming;
-    assistant: keeps dialogue natural).
-    DROP — remove the partial turn entirely (npc: lore consistency and a
-    minimal prompt beat conversational bookkeeping; latency is king).
+    KEEP_ANNOTATED — keep the spoken prefix, tagged as interrupted, so the
+    model knows it was cut off (for a character that should react to being
+    interrupted).
+    DROP — remove the partial turn entirely (the NPC default: lore
+    consistency and a minimal prompt beat conversational bookkeeping;
+    latency is king).
     """
 
     KEEP_ANNOTATED = "keep_annotated"
@@ -49,8 +50,7 @@ class StateContextManager:
         self.profile = profile
         self.policy = policy
         self.turns: list[Turn] = []
-        #: Free-form session data: deal fields (sales), user prefs
-        #: (assistant), world/quest state (npc).
+        #: Free-form session data, e.g. world and quest state for an NPC.
         self.session_meta: dict[str, Any] = {}
         self._next_turn_id = 1
 

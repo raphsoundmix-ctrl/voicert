@@ -2,14 +2,16 @@
 
 ## Positioning (do not drift)
 
-> We help Unity game developers give NPCs real, interruptible voice conversations without a recording budget, through one FMOD-native character asset, so players can talk to any NPC and get an in-character answer inside the game's own mix.
+> We help Unity game developers escape the cost, time, and localization limits of pre-recorded voice-over by shipping one FMOD-native, interruptible AI voice agent, so players can talk to any NPC and hear it answer live, in character, inside the game's own mix.
 
+- Two surfaces, two jobs. The site (`docs/index.html`) is for investors, accelerators and studio leads: the problem, the proof, the market, the model, the ask. The README and `docs/*.md` are for engineers: architecture, protocol, measurements, limits. Technical depth moves to the repo, never the other way.
 - Public surfaces (README, `docs/index.html`, GitHub About and topics, `pyproject.toml` description) mention **one product**: an AI voice agent for game NPCs.
 - Bridge order, everywhere: **Unity + FMOD → Unity plain `AudioSource` → Unreal + Wwise**. Write "FMOD or Wwise" and "Unity or Unreal", never the reverse order.
-- The `sales` and `assistant` profiles stay in `src/` and `tests/` and never appear on a public surface. One permitted line lives in `docs/architecture.md`: they exist in `ConfigFactory` only to prove tool sets cannot overlap.
+- The NPC profile is the only profile. The old `sales` and `assistant` profiles and the telephony / WebRTC transport skeletons were deleted on 2026-09-28; do not reintroduce another product's prompt, tools or transport.
 - Banned words: seamless, revolutionary, leverage, unlock. No emoji in copy. Banned topics: telephony (SIP, Twilio, μ-law, 8 kHz), CRM, personal assistant, IoT, calendar, business owner.
-- Honesty: keep every caveat (un-compiled inside an Editor, not benchmarked on a phone, working prototype). Never upgrade a claim. The FMOD sink is milestone M1 until it is compiled and heard.
-- The test count comes from `pytest -q`. Never hardcode a different number.
+- Honesty: keep every caveat (Unreal + Wwise glue not exercised inside an Editor, not benchmarked on a phone, English-only speech recognition, working prototype). Never upgrade a claim. Traction is what exists: no invented users, revenue or round.
+- Competitor claims carry a date and a source. Do not claim to be the only local voice pipeline: NVIDIA ACE ships free on-device plugins for Unreal (2026). The difference is Unity + FMOD.
+- The test count comes from `pytest -q` (and `dotnet test` for C#). Never hardcode a different number.
 
 Full document: `docs/POSITIONING.md`.
 

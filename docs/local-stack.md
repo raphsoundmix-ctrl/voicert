@@ -41,7 +41,7 @@ Two caveats that cut against these numbers, stated because they are the ones a r
 
 ```bash
 pip install -e ".[local,cuda,bench]"   # faster-whisper + httpx + sherpa-onnx + CUDA 12 DLLs + psutil
-ollama pull qwen3:1.7b
+ollama pull qwen3:8b                   # the model the demo ships with; see "Choose the model by measurement"
 ```
 
 sherpa-onnx's PyPI wheel is CPU-only. The CUDA build is a separate wheel, indexed at
@@ -84,8 +84,9 @@ runtime.transport.segmenter = UtteranceSegmenter(UtteranceConfig(), sample_rate=
 await runtime.ctx.llm.warmup()     # during level load, not on first line
 ```
 
-**Half the machine, not all of it.** The stack is sized so a game can render next to it: Whisper
-`base.en` fp16, `qwen3:1.7b` and fp32 Kokoro together hold ~3.5 GB of the 4080's 16 GB, CPU pools are
+**Half the machine, not all of it.** The stack is sized so a game can render next to it. In the
+first sizing pass Whisper `base.en` fp16, `qwen3:1.7b` and fp32 Kokoro together held ~3.5 GB of the 4080's
+16 GB; the shipped defaults (`small.en`, `qwen3:8b`) hold more, with the 8B model alone at 5.6 GB. CPU pools are
 capped at 4 threads (`cpu_threads` / `num_threads`), and GPU work per turn is a burst of a few hundred
 milliseconds. `examples/resmon.py -- <command>` samples GPU utilisation, VRAM and CPU while a
 command runs and prints the percentiles, so the "under 50 %" claim is measured rather than assumed.
@@ -127,4 +128,7 @@ remember.
 renders the player's line with Kokoro and streams it as microphone audio, which makes the whole path —
 VAD, segmenter, Whisper, persona, model, sentence buffer, Kokoro, the wire — testable without a person.
 Measured p50 489 ms (n=10) from the end of the player's speech to the first sample back with the
-editor idle, 850-1100 ms with the game rendering; the numbers and their breakdown live in `VERSIONS.md` ("Stage 3").
+editor idle, 850-1100 ms with the game rendering on the same GPU (RTX 4080; Whisper `small.en`,
+`qwen3:8b`, Kokoro fp32 v1.0). The gap is contention, not a slow stage: one GPU has three tenants, and
+Kokoro's first chunk goes from 123.6 ms to 347.2 ms while the 8B model decodes beside it. Closing that gap
+is the next latency target; the NPC profile's budget is 300 ms to first audio.

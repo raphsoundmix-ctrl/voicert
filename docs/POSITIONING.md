@@ -1,12 +1,16 @@
 # VoiceRT positioning
 
-Status: DRAFT. Raph confirms the sentence in AltaLab Day 1, Task 4. Until then every public sentence on the site, in the README and in the GitHub About is judged against it: one promise, one standard.
+Status: the sentence below is the mission statement from the AltaLab Day 1 practice (2026-09-08). Every public sentence on the site, in the README and in the GitHub About is judged against it: one promise, one standard.
 
 ## The one sentence
 
-> We help Unity game developers give NPCs real, interruptible voice conversations without a recording budget, through one FMOD-native character asset, so players can talk to any NPC and get an in-character answer inside the game's own mix.
+> We help Unity game developers escape the cost, time, and localization limits of pre-recorded voice-over by shipping one FMOD-native, interruptible AI voice agent, so players can talk to any NPC and hear it answer live, in character, inside the game's own mix.
 
-What is true today, and what public copy says next to the sentence: the Unity package streams into a plain `AudioSource` **or** the FMOD programmer-instrument sink; both are compiled in Unity 6.3 LTS and the FMOD path is verified live through a real microphone, fully local on one GPU. M1 has shipped, so the old "nothing has been compiled inside a Unity Editor yet" status line is retired. What stays un-exercised, and must keep saying so: the Unreal + Wwise glue.
+What is true today, and what public copy says next to the sentence: the Unity package streams into a plain `AudioSource` **or** the FMOD programmer-instrument sink; both are compiled in Unity 6 (6000.6) and the FMOD path is verified live through a real microphone, fully local on one GPU. M1 has shipped. What stays un-exercised, and must keep saying so: the Unreal + Wwise glue. Speech recognition is English-only today (Whisper `small.en`), so "localization" is a direction, not a shipped feature.
+
+## Two surfaces
+
+The site is for investors, accelerators and studio leads, and follows the AltaLab pitch order: why now, the pain, the product, the proof, the market, the model, the team, the ask. The README and `docs/*.md` are for engineers. When a technical section grows on the site, it moves to the repo and the site links to it.
 
 ## Audience
 
@@ -26,9 +30,7 @@ Why this order: FMOD Studio's Unity integration is the most common middleware pa
 
 Words: seamless, revolutionary, leverage, unlock. No emoji in copy.
 
-Topics: telephony (SIP, Twilio, μ-law, 8 kHz, −22 dBFS), CRM, personal assistant, IoT, calendar, business owner, "one core, many jobs", "real-time voice agent framework" as the framing, the `sales` and `assistant` profiles.
-
-One permitted mention, in `docs/architecture.md` only: other profiles exist in `ConfigFactory` only to prove tool sets cannot overlap; they are not on the roadmap.
+Topics: telephony (SIP, Twilio, μ-law, 8 kHz, −22 dBFS), CRM, personal assistant, IoT, calendar, business owner, "one core, many jobs", "real-time voice agent framework" as the framing. The old `sales` and `assistant` profiles were deleted from the code on 2026-09-28.
 
 Honesty rules stay. Every caveat about un-compiled engine glue, un-benchmarked phones and prototype status is preserved. Nothing is upgraded from "designed" to "measured" or from "prototype" to "shipped".
 
@@ -36,15 +38,15 @@ Honesty rules stay. Every caveat about un-compiled engine glue, un-benchmarked p
 
 | Anchor | Current answer | Status |
 |---|---|---|
-| MVP | Unity + FMOD NPC asset: UPM package, FMOD programmer-instrument sink, one demo scene (tavern keeper) | DRAFT |
-| Key metric | NPC conversations completed per week across installs | ASSUMPTION, decided Day 3 |
-| Key growth channel | GitHub, the FMOD forum, the Unity forum, game-audio Discords | ASSUMPTION, decided Day 4 |
+| MVP | Unity + FMOD NPC asset: UPM package, FMOD programmer-instrument sink, one demo scene (tavern keeper) | M1 shipped; demo scene is M2 |
+| Key metric | NPC conversations completed per week across installs | ASSUMPTION, no installs yet |
+| Key growth channel | Direct outbound to Unity developers building sandbox and simulation games; metric: 10-minute demo calls booked per week | Chosen in the AltaLab Day 4 practice (2026-09-27) |
 
 ## Milestones
 
 | | Milestone | Done when |
 |---|---|---|
-| M1 | FMOD programmer-instrument sink in the Unity package | compiled in Unity 6.3 LTS with FMOD for Unity 2.03.14; a programmer sound plays PCM from the bridge |
+| M1 | FMOD programmer-instrument sink in the Unity package | compiled in Unity 6 with FMOD for Unity 2.03.14; a programmer sound plays PCM from the bridge (done) |
 | M2 | Demo scene: tavern keeper | mic → NPC → FMOD event, barge-in and LOD visible; 30-second video recorded |
 | M3 | Live providers behind the adapters | Deepgram / Claude Haiku / ElevenLabs Flash and faster-whisper / Ollama / sherpa-onnx both run end to end |
 | M4 | UPM 0.1 release | package published; Unreal + Wwise at parity |
