@@ -27,6 +27,8 @@ namespace VoiceRT.Core
         public event Action<byte[]> AudioReceived;                 // PCM16 mono 16 kHz
         public event Action<string, int> TextReceived;             // text, turnId
         public event Action<int, string> TurnEnded;                // turnId, metrics JSON
+        public event Action<string> StateChanged;                  // idle|listening|processing|...
+        public event Action<string, bool> Transcript;              // what the player said, final?
         public event Action Flushed;                               // drop all queued audio NOW
         public event Action<string, string, string> ToolCalled;    // name, args JSON, callId
         public event Action<string> ErrorReceived;
@@ -79,6 +81,9 @@ namespace VoiceRT.Core
                 MiniJson.Object(("event", MiniJson.Str(name)), ("payload", string.IsNullOrEmpty(payloadJson) ? "{}" : payloadJson))));
 
         public void SendInterrupt() => Send(FrameCodec.Encode(FrameType.Interrupt));
+
+        /// <summary>The player let go of push-to-talk: close the utterance now.</summary>
+        public void SendEndpoint() => Send(FrameCodec.Encode(FrameType.Endpoint));
 
         public void SendLod(string tier, float distanceMeters, float priority) =>
             Send(FrameCodec.EncodeText(FrameType.Lod,
@@ -147,6 +152,18 @@ namespace VoiceRT.Core
                 case FrameType.Flush:
                     Flushed?.Invoke();
                     break;
+                case FrameType.State:
+                    StateChanged?.Invoke(MiniJson.GetString(f.PayloadText, "state") ?? "idle");
+                    break;
+                case FrameType.Stt:
+                {
+                    var j = f.PayloadText;
+                    // MiniJson has no bool reader; the server writes exactly
+                    // true or false, so a substring test is the whole parser.
+                    bool final = (MiniJson.GetRaw(j, "final") ?? "false").Trim() == "true";
+                    Transcript?.Invoke(MiniJson.GetString(j, "text") ?? "", final);
+                    break;
+                }
                 case FrameType.Tool:
                 {
                     var j = f.PayloadText;

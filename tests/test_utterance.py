@@ -198,3 +198,53 @@ async def test_barge_in_still_fires_on_the_leading_edge():
 
     await transport.feed_input(chunk(50, value=6000))
     assert fired == ["start"], "interrupt signal is immediate, not deferred"
+
+
+# ------------------------------------------------- who owns the boundaries
+
+
+async def test_a_pause_inside_a_held_key_does_not_split_the_utterance():
+    """One press, one sentence, one answer.
+
+    Speak, pause long enough for the VAD to call it finished, speak again, then
+    release the key. That is one utterance. Before this, the pause dispatched
+    the first half — so the character answered it while the player was still
+    saying the second, which reads as "the reply is to what I said before".
+    """
+    loud = 6000
+    transport = LoopbackTransport(vad=EnergyVAD(VADConfig(sensitivity=0.5, hangover_ms=100)))
+    transport.segmenter = UtteranceSegmenter(
+        UtteranceConfig(preroll_ms=100, min_utterance_ms=100), RATE
+    )
+    pushed = await _wire(transport)
+
+    await transport.end_utterance()      # the client declares that it owns endpoints
+    pushed.clear()
+
+    for _ in range(8):
+        await transport.feed_input(chunk(50, value=loud))   # 400 ms of speech
+    for _ in range(6):
+        await transport.feed_input(chunk(50))               # 300 ms of pause
+    assert pushed == [], "a pause inside a held key must not dispatch half a sentence"
+
+    for _ in range(8):
+        await transport.feed_input(chunk(50, value=loud))   # the rest of it
+    assert await transport.end_utterance() is True
+    assert len(pushed) == 1, "one press must produce exactly one utterance"
+    assert ms_of(pushed[0].pcm) >= 800, "both halves, and the pause between them"
+
+
+async def test_an_open_mic_client_still_endpoints_on_silence():
+    """Nothing changes for a client that never sends ENDPOINT."""
+    loud = 6000
+    transport = LoopbackTransport(vad=EnergyVAD(VADConfig(sensitivity=0.5, hangover_ms=100)))
+    transport.segmenter = UtteranceSegmenter(
+        UtteranceConfig(preroll_ms=100, min_utterance_ms=100), RATE
+    )
+    pushed = await _wire(transport)
+
+    for _ in range(8):
+        await transport.feed_input(chunk(50, value=loud))
+    for _ in range(6):
+        await transport.feed_input(chunk(50))
+    assert len(pushed) == 1, "the VAD must still close an utterance for an open mic"

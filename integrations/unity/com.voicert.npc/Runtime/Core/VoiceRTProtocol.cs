@@ -19,6 +19,9 @@ namespace VoiceRT.Core
         Event = 0x04,
         Interrupt = 0x05,
         Lod = 0x06,
+        /// <summary>Push-to-talk released: end the utterance now instead of
+        /// waiting out the server's VAD hangover.</summary>
+        Endpoint = 0x07,
 
         // server -> client
         Ready = 0x81,
@@ -27,6 +30,10 @@ namespace VoiceRT.Core
         TurnEnd = 0x84,
         Flush = 0x85,
         Tool = 0x86,
+        /// <summary>idle | listening | processing | speaking | interrupted | error</summary>
+        State = 0x87,
+        /// <summary>What the player was heard to say; final=false is a preview.</summary>
+        Stt = 0x88,
         Error = 0x8F,
     }
 

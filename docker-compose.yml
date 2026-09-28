@@ -1,0 +1,154 @@
+# VoiceRT engine bridge -- Docker Desktop on Windows, Unity editor on the host.
+#
+#   docker compose up -d                      # stub providers, no keys needed
+#   docker compose --profile local up -d      # + the Ollama-backed variant
+#
+# Compose reads ./.env automatically for ${VAR} interpolation. There is no
+# `env_file:` on purpose: interpolating the keys by name means only the
+# variables listed below reach the container, instead of every line of .env.
+#
+# No `version:` key -- it has been obsolete since Compose v2 and current
+# Compose warns about it.
+
+name: voicert
+
+services:
+  # ---------------------------------------------------------------- stub ---
+  # Zero dependencies, zero keys. This is the one a Unity NPC talks to today.
+  bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        VOICERT_EXTRAS: ""
+    image: voicert-bridge:stub
+    container_name: voicert-bridge
+
+    # THE security boundary, and the only line here that is load-bearing for
+    # safety. "8765:8765" would bind 0.0.0.0 on the host and put an
+    # unauthenticated NPC session server on the LAN. On Linux that is worse
+    # than it looks: docker's DNAT rules are consulted before the ufw
+    # INPUT chain, so the host firewall does not save you.
+    #
+    # The host half is a variable because 8765 is not reliably free -- on the
+    # machine this was written on, a stray pythonw.exe already held
+    # 127.0.0.1:8765 and `compose up` failed with "ports are not available".
+    # Set VOICERT_HOST_PORT in .env and change the Unity inspector to match.
+    ports:
+      - "127.0.0.1:${VOICERT_HOST_PORT:-8767}:8765"
+
+    environment:
+      # 0.0.0.0 is correct *inside* the container: the published-port proxy
+      # dials the container's interface address, not its loopback. Binding
+      # 127.0.0.1 in here makes the bridge unreachable from Unity entirely.
+      VOICERT_BIND_HOST: "0.0.0.0"
+      VOICERT_PORT: "8765"
+      VOICERT_MAX_SESSIONS: "${VOICERT_MAX_SESSIONS:-8}"
+      VOICERT_LOG_LEVEL: "${VOICERT_LOG_LEVEL:-INFO}"
+      VOICERT_SHUTDOWN_GRACE: "${VOICERT_SHUTDOWN_GRACE:-5}"
+      # Provider keys, forwarded by name from .env. Every adapter in
+      # src/voicert/processors/adapters.py still raises NotImplementedError,
+      # so today these are plumbing for the first real runtime_factory.
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      DEEPGRAM_API_KEY: "${DEEPGRAM_API_KEY:-}"
+      ELEVENLABS_API_KEY: "${ELEVENLABS_API_KEY:-}"
+      CARTESIA_API_KEY: "${CARTESIA_API_KEY:-}"
+
+    # Must exceed VOICERT_SHUTDOWN_GRACE, or Docker SIGKILLs the process
+    # mid-drain. Measured default on this Docker Desktop was 1s, which is
+    # not enough -- do not rely on it.
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+    # Nothing in a stub session is written to disk; state lives in the
+    # socket and dies with it. No volume here is deliberate, not an omission.
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --------------------------------------------------------------- local ---
+  # Same Dockerfile, built with the [local] extras, LLM pointed at the Ollama
+  # running natively on Windows. Started only by: --profile local
+  #
+  # Published on 8766 because a profile-less service (bridge, above) always
+  # starts too -- both on 8765 would collide. Point the NPC inspector at
+  # 8766, or run this one alone: docker compose up -d bridge-local
+  bridge-local:
+    profiles: ["local"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        VOICERT_EXTRAS: "[local]"
+    image: voicert-bridge:local
+    container_name: voicert-bridge-local
+
+    ports:
+      - "127.0.0.1:${VOICERT_LOCAL_HOST_PORT:-8768}:8765"
+
+    environment:
+      VOICERT_BIND_HOST: "0.0.0.0"
+      VOICERT_PORT: "8765"
+      VOICERT_MAX_SESSIONS: "${VOICERT_MAX_SESSIONS:-8}"
+      VOICERT_LOG_LEVEL: "${VOICERT_LOG_LEVEL:-INFO}"
+      VOICERT_SHUTDOWN_GRACE: "${VOICERT_SHUTDOWN_GRACE:-5}"
+      VOICERT_RUNTIME_FACTORY: "local_factory:build"
+      # THE Ollama URL from inside a container on Windows. 127.0.0.1 in here
+      # is the container itself, where nothing is listening.
+      #
+      # Verified on Docker Desktop 29.4.0 / Windows: this reaches an Ollama
+      # bound to 127.0.0.1:11434 on the host -- host.docker.internal resolves
+      # to the Desktop gateway (192.168.65.254) and that gateway proxies to
+      # host loopback. No OLLAMA_HOST change is needed here.
+      #
+      # On a LINUX host it is different: host-gateway is the real bridge
+      # address, and a loopback-bound Ollama refuses it. There you must set
+      #   OLLAMA_HOST=0.0.0.0:11434
+      # and firewall the port, because that also exposes Ollama to the LAN.
+      VOICERT_OLLAMA_URL: "${VOICERT_OLLAMA_URL:-http://host.docker.internal:11434}"
+      VOICERT_OLLAMA_MODEL: "${VOICERT_OLLAMA_MODEL:-qwen3:1.7b}"
+      VOICERT_OLLAMA_NUM_PREDICT: "${VOICERT_OLLAMA_NUM_PREDICT:-120}"
+
+    # Built into Docker Desktop; this line is what makes the same compose
+    # file work when you move it to a Linux host.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # This one DOES have state worth keeping: downloaded Whisper weights and
+    # any sherpa-onnx voice you drop in. /models is created in the image owned
+    # by uid 10001, so the fresh named volume inherits a writable owner.
+    volumes:
+      - voicert-models:/models
+      # Prefer your own model tree? Swap the line above for a bind mount --
+      # quote it, the path has a space:
+      # - "D:/VOICE RT/models:/models"
+
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  voicert-models:

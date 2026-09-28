@@ -57,6 +57,10 @@ class TextFrame(Frame):
     role: str = "user"  # "user" | "assistant" | "system"
     final: bool = True
     turn_id: int = 0
+    #: For assistant frames: the user turn this one answers. Turn ids are
+    #: otherwise related only by "the user's came first", which stops being true
+    #: the moment two typed lines arrive before the model opens its reply.
+    reply_to: int = 0
 
 
 class InterruptionReason(str, Enum):
@@ -84,6 +88,21 @@ class FunctionCallFrame(Frame):
     arguments: dict[str, Any]
     call_id: str
     result: Any = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ErrorFrame(Frame):
+    """A stage failed and this turn will produce nothing more.
+
+    Errors travel *forward* like any other frame so the transport can tell the
+    engine. Without one, a provider failure — Ollama evicted, CUDA out of
+    memory, a bad speaker id — is logged on the server and looks to the game
+    exactly like an NPC that decided not to answer.
+    """
+
+    message: str
+    stage: str = ""
+    turn_id: int = 0
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

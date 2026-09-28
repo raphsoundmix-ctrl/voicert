@@ -1,39 +1,39 @@
-// VoiceRT NPC — drop onto any GameObject with an AudioSource and it talks.
+// VoiceRT NPC — drop it on a character and it talks.
 //
 // What this component does:
 //   * opens one TCP connection to the VoiceRT bridge for this NPC
-//   * plays the streamed voice through the AudioSource, so Unity's own
-//     spatializer, mixer groups, reverb zones and occlusion apply untouched
+//   * hands the streamed voice to an IVoiceRTAudioSink — a plain AudioSource by
+//     default, or the FMOD programmer-sound sink when one is on the same object
 //   * raises UnityEvents for subtitles, tool calls (animations, gestures),
 //     turn end, flush and errors — all on the main thread
-//   * honours FLUSH instantly: barge-in empties the ring buffer before the
-//     next audio callback
+//   * honours FLUSH instantly: barge-in empties the buffer before the next
+//     audio callback, without waiting for a round trip
 //
-// Audio path: AudioClip.Create(..., stream: true, PCMReaderCallback) at the
-// engine output rate. The reader callback pulls from a PcmRingBuffer that
-// the network thread fills, resampling 16 kHz -> output rate on the fly.
-// Using a streaming clip (rather than OnAudioFilterRead on a silent source)
-// keeps the voice a normal AudioSource voice: 3D, priority, doppler, mixer.
+// Where the audio goes is deliberately not this class's business. The sink
+// interface carries the thread contract: Write and Flush run on the network
+// reader thread (no marshalling — that is the point), everything else is main
+// thread.
 
 using System;
 using System.Collections.Concurrent;
 using UnityEngine;
 using UnityEngine.Events;
-using VoiceRT.Core;
+using VoiceRT.Core;   // VoiceRTClient, HelloOptions
 
 namespace VoiceRT
 {
     [Serializable] public class StringEvent : UnityEvent<string> { }
     [Serializable] public class ToolEvent : UnityEvent<string, string> { }   // toolName, argsJson
     [Serializable] public class TurnEndEvent : UnityEvent<int, string> { }   // turnId, metricsJson
+    [Serializable] public class TranscriptEvent : UnityEvent<string, bool> { }  // heard text, final?
 
     [AddComponentMenu("VoiceRT/VoiceRT NPC")]
-    [RequireComponent(typeof(AudioSource))]
     public sealed class VoiceRTNpc : MonoBehaviour
     {
         [Header("Bridge")]
         public string host = "127.0.0.1";
-        public int port = 8765;
+        [Tooltip("The local server listens on 8767; 8765 is the library default and is often taken.")]
+        public int port = 8767;
         public bool connectOnEnable = true;
 
         [Header("Character")]
@@ -41,29 +41,38 @@ namespace VoiceRT
         public string npcId = "yorick";
         public string character = "Yorick, a merchant of the Harbor Quarter";
         [TextArea(2, 5)] public string loreScope = "the city of Velenhart, its guilds, goods, and rumors";
+        [Tooltip("A role the server knows (keeper, smith, healer...), a Kokoro voice name, or a speaker id.")]
         public string voice = "default";
 
-        [Header("Audio")]
-        [Tooltip("Seconds of voice buffered between network and audio thread.")]
-        [Range(0.25f, 5f)] public float bufferSeconds = 2f;
-
+        // Constructed here, not left to serialization: a component added with
+        // AddComponent at runtime gets null UnityEvents, and the first
+        // AddListener from game code would throw.
         [Header("Events (main thread)")]
-        public StringEvent onSubtitle;      // partial words as they are voiced
-        public ToolEvent onTool;            // play_animation, emit_game_event, ...
-        public TurnEndEvent onTurnEnd;
-        public UnityEvent onFlush;          // barge-in happened
-        public StringEvent onError;
-        public UnityEvent onReady;
-        public UnityEvent onDisconnected;
+        public StringEvent onSubtitle = new StringEvent();   // the line so far, as it is voiced
+        public ToolEvent onTool = new ToolEvent();           // play_animation, emit_game_event, ...
+        public TurnEndEvent onTurnEnd = new TurnEndEvent();
+        public UnityEvent onFlush = new UnityEvent();        // barge-in happened
+        public StringEvent onError = new StringEvent();
+        public UnityEvent onReady = new UnityEvent();
+        public UnityEvent onDisconnected = new UnityEvent();
+        public StringEvent onState = new StringEvent();          // idle|listening|processing|...
+        public TranscriptEvent onTranscript = new TranscriptEvent();  // what the player was heard to say
 
         public bool IsConnected => _client != null && _client.IsConnected;
         public string CurrentSubtitle { get; private set; } = "";
+        /// <summary>What this conversation is doing, as the server sees it.</summary>
+        public string State { get; private set; } = "idle";
+        /// <summary>True while the NPC is audible: the server is still generating the
+        /// reply, or the sink still holds audio it has not played. The second case is
+        /// the long one — a GPU voice renders a reply many times faster than it is
+        /// spoken. The microphone uses this: an open mic next to a speaker hears the
+        /// NPC and barges in on it, and it must not do that in the middle of a line.</summary>
+        public bool IsSpeaking => State == "speaking" || BufferedMilliseconds > 0;
+        /// <summary>The voice's sample rate as announced by READY (24 kHz for Kokoro).</summary>
+        public int BridgeSampleRate => _bridgeRate;
 
         private VoiceRTClient _client;
-        private PcmRingBuffer _ring;
-        private AudioSource _source;
-        private AudioClip _clip;
-        private int _outputRate;
+        private IVoiceRTAudioSink _sink;
         private int _bridgeRate = 16000;
         private readonly ConcurrentQueue<Action> _mainThread = new ConcurrentQueue<Action>();
         private int _currentTurn = -1;
@@ -72,9 +81,10 @@ namespace VoiceRT
 
         private void Awake()
         {
-            _source = GetComponent<AudioSource>();
-            _outputRate = AudioSettings.outputSampleRate;
-            _ring = new PcmRingBuffer(Mathf.CeilToInt(_bridgeRate * bufferSeconds));
+            // GetComponent resolves interfaces. An NPC with no sink of its own gets the
+            // AudioSource path, so the component behaves exactly as it did before the seam.
+            _sink = GetComponent<IVoiceRTAudioSink>();
+            if (_sink == null) _sink = gameObject.AddComponent<VoiceRTAudioSourceSink>();
         }
 
         private void OnEnable()
@@ -90,28 +100,65 @@ namespace VoiceRT
         public void Connect()
         {
             if (IsConnected) return;
-            _client = new VoiceRTClient();
-            _client.Ready += () => Post(() => { _bridgeRate = _client.SampleRate; StartPlayback(); onReady?.Invoke(); });
-            _client.AudioReceived += pcm => _ring.WritePcm16(pcm);   // network thread, thread-safe
-            _client.Flushed += () => { _ring.Clear(); Post(() => onFlush?.Invoke()); };
-            _client.TextReceived += (text, turn) => Post(() =>
+            // A client can be failed-but-not-null: VoiceRTClient.Fail() stops the
+            // reader without closing the socket, so overwriting it here would
+            // orphan a live connection and the server would hold that slot.
+            Disconnect();
+            var client = new VoiceRTClient();
+            _client = client;
+            // Every handler captures the client it belongs to: a queued action from
+            // the previous session must not run against the current one (or against
+            // a disposed one) after the player walks away and comes back.
+            client.Ready += () => Post(() =>
             {
+                if (_client != client) return;
+                _bridgeRate = client.SampleRate;
+                _sink.Configure(_bridgeRate);   // sizes the buffer AND fixes FMOD's defaultfrequency
+                _sink.Begin();
+                onReady?.Invoke();
+            });
+            client.AudioReceived += pcm => { if (_client == client) _sink.Write(pcm); };  // reader thread, by design
+            client.Flushed += () =>
+            {
+                if (_client != client) return;
+                _sink.Flush();                                           // reader thread: ordered cut point
+                Post(() => onFlush?.Invoke());
+            };
+            client.TextReceived += (text, turn) => Post(() =>
+            {
+                if (_client != client) return;
                 if (turn != _currentTurn) { _currentTurn = turn; CurrentSubtitle = ""; }
                 CurrentSubtitle += text;
                 onSubtitle?.Invoke(CurrentSubtitle);
             });
-            _client.TurnEnded += (turn, metrics) => Post(() => onTurnEnd?.Invoke(turn, metrics));
-            _client.ToolCalled += (name, args, id) => Post(() => onTool?.Invoke(name, args));
-            _client.ErrorReceived += msg => Post(() => { Debug.LogWarning($"[VoiceRT:{npcId}] {msg}"); onError?.Invoke(msg); });
-            _client.Disconnected += ex => Post(() =>
+            client.TurnEnded += (turn, metrics) => Post(() => { if (_client == client) onTurnEnd?.Invoke(turn, metrics); });
+            client.StateChanged += state => Post(() =>
             {
+                if (_client != client) return;
+                State = state;
+                onState?.Invoke(state);
+            });
+            client.Transcript += (text, final) => Post(() =>
+            {
+                if (_client == client) onTranscript?.Invoke(text, final);
+            });
+            client.ToolCalled += (name, args, id) => Post(() => { if (_client == client) onTool?.Invoke(name, args); });
+            client.ErrorReceived += msg => Post(() =>
+            {
+                if (_client != client) return;
+                Debug.LogWarning($"[VoiceRT:{npcId}] {msg}");
+                onError?.Invoke(msg);
+            });
+            client.Disconnected += ex => Post(() =>
+            {
+                if (_client != client) return;
                 if (ex != null) Debug.LogWarning($"[VoiceRT:{npcId}] disconnected: {ex.Message}");
                 onDisconnected?.Invoke();
             });
 
             try
             {
-                _client.Connect(host, port, new HelloOptions
+                client.Connect(host, port, new HelloOptions
                 {
                     NpcId = npcId, Character = character, LoreScope = loreScope, Voice = voice,
                 });
@@ -120,17 +167,22 @@ namespace VoiceRT
             {
                 Debug.LogWarning($"[VoiceRT:{npcId}] connect failed: {ex.Message}");
                 onError?.Invoke(ex.Message);
-                _client.Dispose();
+                client.Dispose();
                 _client = null;
             }
         }
 
         public void Disconnect()
         {
-            if (_source != null && _source.isPlaying) _source.Stop();
+            _sink?.End();
             _client?.Dispose();
             _client = null;
-            _ring?.Clear();
+            // Drop this session's leftovers: a queued callback would run against the
+            // next one, and a stale subtitle would be prepended to the next reply.
+            while (_mainThread.TryDequeue(out _)) { }
+            _currentTurn = -1;
+            CurrentSubtitle = "";
+            State = "idle";
         }
 
         private void Update()
@@ -139,25 +191,6 @@ namespace VoiceRT
         }
 
         private void Post(Action a) => _mainThread.Enqueue(a);
-
-        // -- audio ---------------------------------------------------------
-
-        private void StartPlayback()
-        {
-            if (_source.isPlaying) return;
-            // A streaming clip loops over a small window and keeps asking the
-            // callback for more samples, which is exactly a live voice needs.
-            _clip = AudioClip.Create($"VoiceRT-{npcId}", _outputRate, 1, _outputRate, true, OnPcmRead);
-            _source.clip = _clip;
-            _source.loop = true;
-            _source.Play();
-        }
-
-        private void OnPcmRead(float[] data)
-        {
-            // Audio thread. Mono clip, so channels == 1 here; Unity spatializes after.
-            _ring.ReadResampled(data, 1, _bridgeRate, _outputRate);
-        }
 
         // -- gameplay API (call from anywhere on the main thread) ------------
 
@@ -177,8 +210,12 @@ namespace VoiceRT
         /// <summary>Player started talking over the NPC: cut it off now.</summary>
         public void Interrupt()
         {
-            _ring.Clear();           // do not wait for the round trip
-            if (IsConnected) _client.SendInterrupt();
+            // Only ever suppress when a FLUSH can come back to lift it. Barging in
+            // on a disconnected NPC would leave the ring dropping every later
+            // reply, silently, for the rest of the session.
+            if (!IsConnected) return;
+            _sink?.BargeIn();        // drops the queue AND suppresses audio already in flight
+            _client.SendInterrupt();
         }
 
         /// <summary>Report the dialogue LOD tier (see VoiceRTLod).</summary>
@@ -193,6 +230,14 @@ namespace VoiceRT
             if (IsConnected) _client.SendAudio(pcm16Mono16k);
         }
 
-        public int BufferedMilliseconds => _ring == null ? 0 : (int)(1000L * _ring.Available / _bridgeRate);
+        /// <summary>The player stopped talking on purpose (push-to-talk released).
+        /// Ends the utterance now rather than after the server's silence timer,
+        /// which is worth the whole hangover on every turn.</summary>
+        public void EndUtterance()
+        {
+            if (IsConnected) _client.SendEndpoint();
+        }
+
+        public int BufferedMilliseconds => _sink?.BufferedMilliseconds ?? 0;
     }
 }

@@ -1,9 +1,12 @@
 """Latency metrics — TTFB per pipeline stage, Rapida-style structured logs.
 
 Stages tracked per turn (all relative to the user's final utterance):
-  * ``stt_final``       — STT emitted the final transcript
-  * ``llm_first_token`` — first LLM token (true conversational TTFB)
-  * ``tts_first_audio`` — first synthesized audio chunk (what the user hears)
+  * ``stt_final``          — STT emitted the final transcript
+  * ``llm_first_token``    — first LLM token (true conversational TTFB)
+  * ``llm_first_sentence`` — first *complete clause* left the model. The gap from
+    the token above is the model writing; the gap to the audio below is synthesis.
+    Without this mark the two are indistinguishable, and they have opposite fixes.
+  * ``tts_first_audio``    — first synthesized audio chunk (what the user hears)
 
 Budgets are per-profile (NPC has the tightest). ``over_budget`` in the
 report makes regressions greppable in production logs.
@@ -18,7 +21,7 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger("voicert.metrics")
 
-STAGES = ("stt_final", "llm_first_token", "tts_first_audio")
+STAGES = ("stt_final", "llm_first_token", "llm_first_sentence", "tts_first_audio")
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,8 +52,13 @@ class TTFBTracker:
         self._turns: dict[int, TurnMetrics] = {}
         self.interruptions = 0
 
-    def turn_started(self, turn_id: int) -> None:
-        self._turns[turn_id] = TurnMetrics(turn_id=turn_id, started=time.monotonic())
+    def turn_started(self, turn_id: int, started: float | None = None) -> None:
+        """Open a turn. ``started`` is the ``time.monotonic()`` instant the user's
+        utterance was delivered to the pipeline (the VAD endpoint); every stage
+        latency, STT included, is measured from it. Omitted: now."""
+        self._turns[turn_id] = TurnMetrics(
+            turn_id=turn_id, started=time.monotonic() if started is None else started
+        )
 
     def mark(self, turn_id: int, stage: str) -> None:
         tm = self._turns.get(turn_id)

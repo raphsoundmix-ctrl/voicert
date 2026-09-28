@@ -137,6 +137,15 @@ class UtteranceSegmenter:
             return None
         return pcm
 
+    def snapshot(self) -> bytes:
+        """What has been captured so far, without ending the utterance.
+
+        This is what makes a partial transcript possible with a model that has
+        no streaming mode: transcribe the snapshot while the player is still
+        talking, throw the result away when the real one arrives.
+        """
+        return b"".join(self._capture) if self._capturing else b""
+
     def reset(self) -> None:
         """Throw away everything. Used on barge-in and on disconnect."""
         self._capturing = False

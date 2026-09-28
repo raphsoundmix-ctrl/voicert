@@ -11,6 +11,7 @@ follow-up turns reason about the real conversation, not the imagined one.
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -59,6 +60,33 @@ class StateContextManager:
         turn = Turn(turn_id=self._alloc_id(), role="user", text=text, final=True)
         self.turns.append(turn)
         return turn
+
+    def add_history(self, messages: Sequence[Mapping[str, Any]]) -> int:
+        """Seed the history with a remembered conversation.
+
+        Used when a player walks back to a character they have spoken to before:
+        the turns are already final and already spoken, so they carry no metrics
+        and open no barge-in bookkeeping — they exist only to be rendered into
+        the next prompt. Returns how many were taken.
+        """
+        taken = 0
+        for message in messages:
+            role = str(message.get("role", ""))
+            text = str(message.get("text") or message.get("content") or "").strip()
+            if role not in ("user", "assistant") or not text:
+                continue
+            interrupted = bool(message.get("interrupted"))
+            if interrupted and self.policy is ContextPolicy.DROP:
+                # The profile already decided an interrupted turn does not belong
+                # in context. That decision has to survive a reconnect, or the
+                # model is shown fragments it was specifically not meant to see.
+                continue
+            self.turns.append(
+                Turn(turn_id=self._alloc_id(), role=role, text=text, final=True,
+                     interrupted=interrupted)
+            )
+            taken += 1
+        return taken
 
     def begin_assistant_turn(self) -> Turn:
         turn = Turn(turn_id=self._alloc_id(), role="assistant")

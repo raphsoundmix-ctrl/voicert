@@ -18,7 +18,7 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 
-from voicert.frames import EndFrame, Frame, InterruptionFrame, InterruptionReason
+from voicert.frames import EndFrame, ErrorFrame, Frame, InterruptionFrame, InterruptionReason
 
 logger = logging.getLogger("voicert.pipeline")
 
@@ -69,6 +69,15 @@ class Pipeline:
     via a generation counter), which is what makes rapid double barge-in
     safe.
     """
+
+    @property
+    def processors(self) -> tuple[FrameProcessor, ...]:
+        """The processors in pipeline order, read-only.
+
+        Transports use this to ask a stage about itself (the engine bridge
+        reads the TTS output rate here) without reaching into private state.
+        """
+        return tuple(self._processors)
 
     def __init__(self, processors: Sequence[FrameProcessor], *, sink: SinkFn | None = None) -> None:
         if not processors:
@@ -151,8 +160,14 @@ class Pipeline:
                     # Cancelled by interrupt(): swallow and keep pumping.
                     continue
                 raise
-            except Exception:
+            except Exception as exc:
                 logger.exception("processor %s failed on frame %r", proc.name, frame)
+                # Downstream has to hear about it: a swallowed failure ends the
+                # turn with nothing on the wire, and the game waits forever for
+                # a reply that is never coming.
+                await outbox.put(
+                    ErrorFrame(message=str(exc), stage=proc.name, turn_id=getattr(frame, "turn_id", 0))
+                )
             finally:
                 if self._inflight.get(proc.name) is task:
                     del self._inflight[proc.name]

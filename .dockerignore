@@ -1,0 +1,67 @@
+# Build context = the repo root. Everything listed here is withheld from the
+# daemon on every build, which is both a speed and a secrecy question.
+#
+# Two things are deliberately NOT ignored:
+#   README.md  -- pyproject.toml declares readme = "README.md"; without it
+#                 `pip install .` fails in the builder stage.
+#   tests/     -- the `test` build target copies them.
+
+.git
+.gitattributes
+.gitignore
+.github/
+
+# Virtualenvs: the image builds its own at /opt/venv. The repo's .venv is a
+# Windows venv with .exe shims; copying it in would be both useless and huge.
+.venv/
+venv/
+env/
+
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Secrets never enter a build layer. Layers are cached, shipped and readable
+# by anyone who pulls the image.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Engine-side and publishing payload: none of it runs in the bridge process.
+integrations/
+docs/
+examples/
+tools/
+graphify-out/
+.graphify_*
+vercel.json
+.vercel/
+node_modules/
+CLAUDE.md
+SECURITY.md
+
+# Docker's own metadata does not belong inside the image.
+docker-compose*.yml
+compose*.yml
+Dockerfile*
+.dockerignore
+voicert.ps1
+
+# Editor / OS noise
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

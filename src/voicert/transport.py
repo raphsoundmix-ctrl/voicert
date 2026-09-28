@@ -55,6 +55,22 @@ class EnergyVAD:
         self._speaking = False
         self._silence_ms = 0.0
 
+    def reset(self) -> None:
+        """Forget that speech was in progress. Used when something outside the
+        audio path ends an utterance, so the next chunk is judged on its own."""
+        self._speaking = False
+        self._silence_ms = 0.0
+
+    @property
+    def speaking(self) -> bool:
+        """Whether the VAD currently believes the user is mid-utterance.
+
+        A caller that wants to know *why* nothing was dispatched after a
+        SPEECH_END needs this: a closed VAD means the utterance was dropped as
+        too short, an open one means it is still being captured.
+        """
+        return self._speaking
+
     def feed(self, pcm: bytes, sample_rate: int | None = None) -> VADEvent | None:
         samples = array("h")
         samples.frombytes(pcm[: len(pcm) - len(pcm) % 2])
@@ -112,13 +128,26 @@ class BaseTransport:
         #: stub providers and wrong for any real STT model — see
         #: ``voicert.utterance`` for why.
         self.segmenter = segmenter
+        #: Peak absolute sample of the last chunk, 0..1 — a level meter for the
+        #: game, so a player whose microphone is muted can see that it is.
+        self.input_level: float = 0.0
         self.on_speech_start: Callable[[], None] | None = None
         self.on_speech_end: Callable[[], None] | None = None
+        #: Set by the first ``end_utterance()``: this client marks its own
+        #: utterance boundaries (a push-to-talk key), so silence inside one must
+        #: not close it. Without this a pause mid-sentence became a second turn,
+        #: and the answer to the first half arrived over the second.
+        self.client_endpoints = False
         self.on_user_audio: Callable[[AudioFrame], Awaitable[None]] | None = None
+
+    @property
+    def vad_speaking(self) -> bool:
+        return bool(getattr(self.vad, "speaking", False))
 
     async def feed_input(self, pcm: bytes, sample_rate: int = 16_000) -> None:
         """Push microphone/line audio into the framework."""
         event = self.vad.feed(pcm, sample_rate) if self.vad is not None else None
+        self.input_level = _peak_level(pcm)
 
         if self.segmenter is None:
             # Chunk-per-frame: what the stub providers and the offline demo want.
@@ -142,17 +171,61 @@ class BaseTransport:
         elif event is VADEvent.SPEECH_END:
             if self.on_speech_end:
                 self.on_speech_end()
-            overflow = self.segmenter.end() or overflow
+            # A client with its own endpoint key keeps the utterance open across
+            # the pauses inside a sentence; only its ENDPOINT closes one.
+            if not self.client_endpoints:
+                overflow = self.segmenter.end() or overflow
 
         if overflow and self.on_user_audio is not None:
             await self.on_user_audio(
                 AudioFrame(pcm=overflow, sample_rate=sample_rate, source="user")
             )
 
+    async def end_utterance(self) -> bool:
+        """Close the current utterance immediately, whatever the VAD thinks.
+
+        Returns whether anything was actually dispatched: a key tapped by
+        mistake, or a word too quiet for the VAD to open on, produces no
+        utterance, and the caller has to say so rather than leave the game
+        waiting for an answer nobody asked for.
+
+        This is what a released push-to-talk key means. Endpointing by silence
+        costs the hangover on every turn — 450 ms the player waits after they
+        have already finished — and a player holding a key has told us exactly
+        when they stopped. With no segmenter there is nothing buffered to close,
+        because every chunk was dispatched as it arrived.
+        """
+        self.client_endpoints = True
+        if self.segmenter is None:
+            return False
+        pcm = self.segmenter.end()
+        if self.vad is not None:
+            self.vad.reset()
+        if self.on_speech_end is not None:
+            self.on_speech_end()
+        if not pcm:
+            return False
+        if self.on_user_audio is not None:
+            await self.on_user_audio(
+                AudioFrame(pcm=pcm, sample_rate=self.segmenter.sample_rate, source="user")
+            )
+        return True
+
     async def sink(self, frame: Frame) -> None:
         """Pipeline output lands here. Override: play audio, flush on
         InterruptionFrame."""
         raise NotImplementedError
+
+
+def _peak_level(pcm: bytes) -> float:
+    """Peak of an int16 chunk in 0..1. Sampled, not summed: this runs on every
+    20 ms chunk of every session and a level meter does not need every sample."""
+    samples = array("h")
+    samples.frombytes(pcm[: len(pcm) - len(pcm) % 2])
+    if not samples:
+        return 0.0
+    step = max(1, len(samples) // 128)
+    return min(1.0, max(abs(samples[i]) for i in range(0, len(samples), step)) / 32768.0)
 
 
 class LoopbackTransport(BaseTransport):

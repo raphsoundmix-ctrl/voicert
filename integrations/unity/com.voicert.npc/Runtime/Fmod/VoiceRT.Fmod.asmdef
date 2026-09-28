@@ -1,0 +1,19 @@
+{
+  "name": "VoiceRT.Fmod",
+  "rootNamespace": "VoiceRT.Fmod",
+  "references": [
+    "VoiceRT.Runtime",
+    "FMODUnity"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+    "VOICERT_FMOD"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
