@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VoiceRT — Give every NPC a character that persists</title>
-<meta name="description" content="VoiceRT gives game NPCs persistent memory, identity, strict character rules and voice — one authored character, dropped onto a Unity NPC, speaking inside the game's own FMOD mix. Runs fully local on your own GPU. Working prototype.">
-<meta property="og:title" content="VoiceRT — Give every NPC a character that persists">
-<meta property="og:description" content="VoiceRT gives game NPCs persistent memory, identity, strict character rules and voice — one authored character, dropped onto a Unity NPC, speaking inside the game's own FMOD mix. Runs fully local on your own GPU. Working prototype.">
+<title>VoiceRT — Every NPC can talk back, without a voice-cast budget</title>
+<meta name="description" content="VoiceRT gives every NPC in a Unity game a real, interruptible voice conversation, in character, voiced on the player's own GPU and played through FMOD like any recorded line. No per-line recording, no per-player bill. Working prototype, AltaLab Fall 2026 cohort.">
+<meta property="og:title" content="VoiceRT — Every NPC can talk back, without a voice-cast budget">
+<meta property="og:description" content="Real, interruptible NPC voice conversations for Unity games, voiced on the player's GPU and mixed through FMOD. No per-line recording, no per-player bill.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://ai-voice-agent-demo-rose.vercel.app/">
+<meta property="og:url" content="https://voice-rt-agent.vercel.app/">
 <meta property="og:site_name" content="VoiceRT">
-<meta property="og:image" content="https://ai-voice-agent-demo-rose.vercel.app/media/og.png">
+<meta property="og:image" content="https://voice-rt-agent.vercel.app/media/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -25,698 +25,450 @@
 <header class="nav">
   <div class="nav-inner">
     <a class="logo" href="#top">Voice<span>RT</span></a>
-    <nav>
-      <a href="#live">How it works</a>
-      <a href="#wiring">FMOD wiring</a>
-      <a href="#games">Cost</a>
-      <a href="#demo">Demo</a>
-      <a href="#roadmap">Roadmap</a>
-      <a href="https://github.com/raphsoundmix-ctrl/voicert#readme" target="_blank" rel="noopener">Docs</a>
-      <a class="gh" href="https://github.com/raphsoundmix-ctrl/voicert" target="_blank" rel="noopener">GitHub ↗</a>
+    <nav aria-label="Main">
+      <a class="opt" href="#why-now">Why now</a>
+      <a href="#product">Product</a>
+      <a href="#proof">Proof</a>
+      <a class="opt" href="#market">Market</a>
+      <a class="opt" href="#model">Model</a>
+      <a class="opt" href="#team">Team</a>
+      <a class="nav-cta" href="#access">Early access</a>
+      <a class="gh" href="https://github.com/raphsoundmix-ctrl/voicert#readme" target="_blank" rel="noopener">Tech docs ↗</a>
     </nav>
   </div>
 </header>
 
 <main id="top">
 
-  <!-- ============ HERO ============ -->
+  <!-- ============ HERO: the problem and the answer in one breath ============ -->
   <section class="hero">
     <canvas id="wave" aria-hidden="true"></canvas>
     <div class="hero-inner">
-      <p class="kicker">AI character runtime for indie games · Unity + FMOD first · working prototype</p>
-      <h1>Give every NPC a <em>character that persists</em>.</h1>
-      <p class="deck">One authored character — identity, boundaries, memory, voice — dropped onto a Unity NPC and speaking inside your FMOD mix. No recording budget.</p>
-      <p class="sub">
-        We help indie Unity teams turn an authored NPC into a character that persists — it remembers the player, holds its identity and never steps outside the role you wrote — shipped as one FMOD-native asset, answering in character inside the game's own mix.
+      <p class="kicker">AI voice for game NPCs · Unity + FMOD · working prototype</p>
+      <h1>Every NPC can talk back.<br><em>No voice-cast budget.</em></h1>
+      <p class="deck">
+        Unity indie developers either pay for a full voice cast or ship NPCs that stay silent.
+        Nothing in between fits a small budget. VoiceRT is the in&#8209;between.
       </p>
-      <p class="sub status">
-        The FMOD programmer-instrument sink is live and verified: hold a key, walk up to an NPC, and
-        talk — speech recognition, the reply and the voice all run on your own GPU.
+      <p class="sub">
+        Any NPC holds a real, interruptible conversation in character, voiced on the player's own
+        GPU and played through FMOD like every other sound in the game. No per-line recording.
+        No per-player bill.
       </p>
       <div class="chips">
-        <span class="chip"><b>0 ms</b> interrupt gate</span>
-        <span class="chip">fully local · <b>Whisper</b> · <b>qwen3:8b</b> · <b>Kokoro</b></span>
-        <span class="chip">synthesis off the render thread · <b>16.6 ms</b> at 60 fps</span>
-        <span class="chip"><b>$0</b> / turn · no API key, GPU-enforced</span>
+        <span class="chip">M1 shipped · <b>Unity 6 + FMOD 2.03</b></span>
+        <span class="chip"><b>~0.5 s</b> from speech to reply voice (p50)</span>
+        <span class="chip"><b>$0</b> per turn on the player's GPU</span>
+        <span class="chip">AltaLab <b>Fall 2026</b> cohort</span>
       </div>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/raphsoundmix-ctrl/voicert#quick-start-unity--fmod" target="_blank" rel="noopener">Install the Unity package</a>
-        <a class="btn" href="#live">How it works</a>
-        <a class="btn" href="https://github.com/raphsoundmix-ctrl/voicert" target="_blank" rel="noopener">Source on GitHub</a>
+        <a class="btn primary" href="#access">Get early access</a>
+        <a class="btn" href="https://cal.com/raph-ai-voice/meet-with-raph" target="_blank" rel="noopener">Book a 10-minute demo</a>
+        <a class="btn" href="https://github.com/raphsoundmix-ctrl/voicert#readme" target="_blank" rel="noopener">Technical docs</a>
       </div>
     </div>
   </section>
 
-  <!-- ============ TRY IT ============ -->
-  <section id="try" class="section alt">
-    <h2>Try it</h2>
-    <div class="grid2">
-      <div class="card">
-        <h3>In Unity</h3>
-        <pre class="cmd">Window &gt; Package Manager &gt; + &gt; Add package from git URL
-https://github.com/raphsoundmix-ctrl/voicert.git?path=/integrations/unity/com.voicert.npc
-Add Component &gt; VoiceRT &gt; VoiceRT NPC
-# press Play — the local server (and Ollama) start themselves</pre>
-      </div>
-      <div class="card">
-        <h3>Without an engine</h3>
-        <pre class="cmd">pip install -e ".[dev]"
-python examples/run_demo.py npc   # one turn, a barge-in, then the NPC carries on
-pytest -q &amp;&amp; mypy                # 228 tests, no API keys</pre>
-      </div>
-    </div>
-    <p class="note">
-      Compiles and runs inside Unity 6 with the FMOD programmer-instrument sink; a plain
-      <span class="mono">AudioSource</span> still works if you skip FMOD. Whisper, the local LLM
-      and Kokoro all run on your own GPU — the server checks all three and refuses to start on a
-      CPU fallback.
-    </p>
-  </section>
-
-  <!-- ============ WHY NPCS ============ -->
-  <section id="why" class="section">
-    <h2>Why NPCs</h2>
+  <!-- ============ 1 · WHY NOW (change in the world) ============ -->
+  <section id="why-now" class="section">
+    <p class="eyebrow mono">Why now</p>
+    <h2>Voice models moved onto the player's GPU.</h2>
     <p class="lead">
-      Design the character once: who it is, what it knows, what it never says. It ships as one asset
-      dropped onto a Unity NPC, and the player talks to it inside the game's own mix.
+      In 2025 and 2026 shipped games started running language models inside the player's own
+      machine, and generative AI became an ordinary line in a Steam release. The model is no longer
+      the hard part. Getting its voice into a game's mix, at a cost an indie game can carry, is.
+    </p>
+    <div class="stat-row">
+      <div class="stat">
+        <b>2B</b>
+        <span>parameters: the model PUBG Ally runs on the player's RTX GPU (8 GB or more).
+        inZOI's Smart Zoi runs a 0.5B one. Both shipped on-device.</span>
+      </div>
+      <div class="stat">
+        <b>~1 in 5</b>
+        <span>new Steam releases in 2025 disclosed generative AI; 7,818 titles in all, about 7% of
+        the library (as of July 2025).</span>
+      </div>
+      <div class="stat accent">
+        <b>10×</b>
+        <span>faster than real time: the voice in VoiceRT's stack synthesizes at a real-time factor
+        of 0.07–0.11 on one RTX 4080, measured.</span>
+      </div>
+    </div>
+    <p class="source mono">Sources: NVIDIA (PUBG Ally, inZOI) · Totally Human (Steam disclosures) · VoiceRT measurements — <a href="#sources">full list</a></p>
+  </section>
+
+  <!-- ============ 2 · THE PAIN ============ -->
+  <section id="problem" class="section alt">
+    <p class="eyebrow mono">The problem</p>
+    <h2>Pay for a full voice cast, or ship NPCs that stay silent.</h2>
+    <p class="lead">
+      Voiced dialogue is priced per line recorded or per line generated. Neither fits a game whose
+      whole point is that players can say anything.
     </p>
     <div class="grid3">
       <div class="card">
         <h3>Recording does not scale</h3>
-        <p>The SAG-AFTRA floor is $1,134.95 for a 4-hour day covering up to three voices, before
-        studio, direction and retakes. Skyrim shipped around 60,000 lines; Starfield was announced at
-        over 250,000. Nobody records an open world twice.</p>
+        <p><b>$1,134.95</b> buys one 4-hour SAG-AFTRA session for up to three voices (2025–26 rate),
+        before studio, direction and retakes. Starfield was announced at over 250,000 lines; Skyrim
+        shipped around 60,000. Every script rewrite is a new session.</p>
       </div>
       <div class="card">
-        <h3>An AI voice has to be an ordinary voice</h3>
-        <p>Same FMOD buses, attenuation curves, occlusion, reverb sends and ducking the sound designer
-        already built. Anything else means a second mix, and that is where AI dialogue starts to
-        sound pasted on.</p>
+        <h3>Cloud voice turns success into a bill</h3>
+        <p>Speech synthesis is about <b>90%</b> of a cloud voice turn. Every player who talks costs the
+        studio money, so a hit becomes a growing invoice. A game designer who reviewed an early build
+        put it plainly: <i>"sold a game for $10, player burned $15 of tokens."</i></p>
       </div>
       <div class="card">
-        <h3>Cost per player is a budget, not a hope</h3>
-        <p>The runtime enforces a spending ceiling the same way it enforces latency. Out of budget
-        means an authored line, never an error dialog.</p>
+        <h3>A voice outside the mix sounds pasted on</h3>
+        <p>Dialogue that arrives as a separate stream skips the buses, attenuation, occlusion, reverb
+        and ducking the sound designer built. Players hear the difference before they can name it.</p>
       </div>
     </div>
     <p class="note">
-      This already ships. PUBG's Ally Duo runs a quantized 2B Mistral-NeMo-Minitron on the player's
-      GPU; inZOI's Smart Zoi runs a 0.5B Minitron. VoiceRT uses the same split: reflexes never wait
-      for the model.
-    </p>
-    <p class="note">
-      The character stays inside the game's lore, and the guardrail is structural: the NPC has no
-      tools outside the game engine to reach for. The whole argument with numbers:
-      <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/economics.md" target="_blank" rel="noopener">docs/economics.md</a>.
+      Who feels it most: <b>sandbox and simulation games</b>, with the most NPC conversations per
+      player and the thinnest margin per copy. They are the strongest fit in our developer interviews
+      so far.
     </p>
   </section>
 
-  <!-- ============ HOW IT WORKS ============ -->
-  <section id="live" class="section alt">
-    <h2>How it works</h2>
+  <!-- ============ 3 · THE PRODUCT ============ -->
+  <section id="product" class="section">
+    <p class="eyebrow mono">The product</p>
+    <h2>One character asset, dropped onto a Unity NPC.</h2>
     <p class="lead">
-      Everything heavy (VAD, STT, the LLM, TTS) stays in the Python process, on your own GPU. The
-      engine gets a few hundred lines of C#: one socket per live NPC, PCM queued into an ordinary
-      engine sound, text and tool calls forwarded to your MonoBehaviour. The engine never runs a
-      model.
+      Write the character once: who it is, what it knows, what it never says. VoiceRT gives it ears,
+      a voice and a memory of the player, and plays that voice through an FMOD event like any
+      recorded line.
     </p>
 
-    <div class="diagram-wrap">
-      <svg id="diagram" viewBox="0 0 920 590" role="img" aria-label="NPC voice pipeline and what triggers a reply. Unity process: the player holds a push-to-talk key; the mic captures PCM16 at 16 kHz; the Dialogue LOD connects the NPC's socket only in the LIVE tier; the VoiceRT NPC component holds one TCP socket to the voicert process. Releasing the key sends an ENDPOINT — that is what starts generation, not silence. voicert process in Python: an energy-based VAD opens capture and drives barge-in but does not close a push-to-talk turn; Whisper transcribes the whole utterance; a lore-locked LLM (Ollama, tools restricted to the game engine) replies; Kokoro synthesizes PCM16 chunks. All three stages must resolve to CUDA or the server refuses to start. Audio returns as AUDIO_OUT into an FMOD programmer instrument and the game mix; the LLM returns text and tool calls for subtitles and gestures; on barge-in the VAD cancels everything in flight and sends FLUSH to the FMOD event.">
-        <defs>
-          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#3d4657"/>
-          </marker>
-          <marker id="arr-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
-          </marker>
-        </defs>
-
-        <!-- process groups -->
-        <rect class="group" x="20" y="20" width="420" height="550" rx="12"/>
-        <text class="group-label" x="40" y="48">Unity process</text>
-        <rect class="group" x="480" y="20" width="420" height="550" rx="12"/>
-        <text class="group-label" x="500" y="48">voicert process (Python)</text>
-
-        <!-- edges -->
-        <path class="edge" d="M125,126 C125,150 190,150 190,170"/>
-        <text class="edge-label" x="30" y="154">PCM16 16 kHz</text>
-        <path class="edge" d="M335,126 C335,150 270,150 270,170"/>
-        <text class="edge-label" x="430" y="154" text-anchor="end">connect only if LIVE</text>
-
-        <path class="edge hot thick" d="M330,198 H560"/>
-        <text class="edge-label" x="445" y="188" text-anchor="middle">TCP · one socket per live NPC</text>
-
-        <path class="edge hot" d="M680,226 V254"/>
-        <path class="edge hot" d="M680,310 V338"/>
-        <path class="edge hot" d="M680,394 V422"/>
-
-        <path class="edge hot" d="M560,462 H330"/>
-        <text class="edge-label" x="445" y="452" text-anchor="middle">AUDIO_OUT</text>
-        <path class="edge hot" d="M230,478 V500"/>
-
-        <path class="edge" d="M560,366 C460,366 300,350 300,226"/>
-        <text class="edge-label" x="288" y="300" text-anchor="end">TEXT_OUT · TOOL</text>
-        <text class="edge-label" x="288" y="316" text-anchor="end">→ subtitles, gestures</text>
-
-        <!-- barge-in loop -->
-        <path class="edge barge" d="M560,214 H516 Q500,214 500,230 V418 Q500,434 484,434 H330" marker-end="url(#arr-hot)"/>
-        <text class="barge-label mono" x="490" y="324" text-anchor="middle" transform="rotate(-90 490 324)">barge-in: cancel + FLUSH</text>
-
-        <!-- Unity nodes -->
-        <g class="node"><rect x="30" y="70" width="190" height="56" rx="6"/><text x="125" y="92">Push-to-talk mic</text><text class="n-sub" x="125" y="112">release = ENDPOINT</text></g>
-        <g class="node"><rect x="240" y="70" width="190" height="56" rx="6"/><text x="335" y="92">Dialogue LOD</text><text class="n-sub" x="335" y="112">LIVE · BARK · CROWD · OFF</text></g>
-        <g class="node active"><rect x="130" y="170" width="200" height="56" rx="6"/><text x="230" y="192">VoiceRT NPC</text><text class="n-sub" x="230" y="212">MonoBehaviour</text></g>
-        <g class="node"><rect x="130" y="422" width="200" height="56" rx="6"/><text x="230" y="444">FMOD event</text><text class="n-sub" x="230" y="464">programmer instrument</text></g>
-        <g class="node"><rect x="110" y="500" width="240" height="56" rx="6"/><text x="230" y="522">Game mix</text><text class="n-sub" x="230" y="542">3D · occlusion · ducking · buses</text></g>
-
-        <!-- voicert nodes -->
-        <g class="node"><rect x="560" y="170" width="240" height="56" rx="6"/><text x="680" y="192">VAD</text><text class="n-sub" x="680" y="212">EnergyVAD · barge-in only</text></g>
-        <g class="node"><rect x="560" y="254" width="240" height="56" rx="6"/><text x="680" y="276">STT</text><text class="n-sub" x="680" y="296">Whisper small.en</text></g>
-        <g class="node"><rect x="560" y="338" width="240" height="56" rx="6"/><text x="680" y="360">LLM · lore-locked</text><text class="n-sub" x="680" y="380">tools: engine only</text></g>
-        <g class="node"><rect x="560" y="422" width="240" height="56" rx="6"/><text x="680" y="444">TTS</text><text class="n-sub" x="680" y="464">Kokoro → PCM16 chunks</text></g>
-        <g class="node"><rect x="560" y="500" width="320" height="56" rx="6"/><text x="720" y="522">GPU gate</text><text class="n-sub" x="720" y="542">won't start on a CPU fallback</text></g>
-      </svg>
-      <div class="diagram-linear-wrap">
-        <ol class="diagram-linear" aria-label="NPC voice pipeline, in order">
-          <li>Push-to-talk mic: hold to capture, release sends ENDPOINT — that starts generation</li>
-          <li>Dialogue LOD opens the socket only for a LIVE NPC</li>
-          <li>EnergyVAD: drives barge-in, does not close a held-key turn</li>
-          <li>STT: Whisper small.en, whole utterance</li>
-          <li>LLM: qwen3:8b via Ollama, lore-locked, engine-only tools</li>
-          <li>TTS: Kokoro to PCM16</li>
-          <li>FMOD programmer instrument</li>
-          <li>Game mix: 3D, occlusion, ducking, buses</li>
-        </ol>
-        <p class="diagram-linear-note mono">All three stages must resolve to CUDA or the server refuses to start. Barge-in cancels everything in flight and sends FLUSH.</p>
+    <div class="chain">
+      <div class="chain-title"><span class="io out">GPU</span> One turn, all of it on the player's machine</div>
+      <div class="chain-strip">
+        <div class="fx"><b>Player speaks</b><span>push-to-talk,<br>captured through FMOD</span></div>
+        <div class="fx"><b>Whisper hears</b><span>speech to text,<br>the whole sentence</span></div>
+        <div class="fx"><b>Character answers</b><span>lore-locked model<br>that remembers the player</span></div>
+        <div class="fx"><b>Kokoro speaks</b><span>the voice, synthesized<br>on the GPU</span></div>
+        <div class="fx"><b>FMOD event</b><span>programmer instrument,<br>like a recorded line</span></div>
+        <div class="fx hot"><b>Game mix</b><span>3D, occlusion, reverb,<br>ducking — as designed</span></div>
       </div>
-      <p class="diagram-note">Unreal + Wwise is the same picture with <span class="mono">UAkAudioInputComponent</span> in the FMOD slot.</p>
     </div>
 
-    <h3 class="sub-head">The NPC contract</h3>
-    <div class="npc-contract">
+    <div class="grid3">
+      <div class="card">
+        <h3>Interruptible</h3>
+        <p>The player can cut in mid-sentence. The NPC stops at once and remembers only what the player
+        actually heard, never the words that were cut.</p>
+      </div>
+      <div class="card">
+        <h3>Stays in character</h3>
+        <p>Locked to the game's lore, with no tools outside the game engine to reach for. Told to "drop
+        the act", it answers in its own voice.</p>
+      </div>
+      <div class="card">
+        <h3>Remembers the player</h3>
+        <p>Each character keeps its own memory of each player, so a returning player is recognized
+        without being told.</p>
+      </div>
+      <div class="card">
+        <h3>Sounds like the game</h3>
+        <p>The voice is an FMOD event. The sound designer's buses, 3D, reverb and ducking apply exactly
+        as they do for recorded dialogue.</p>
+      </div>
+      <div class="card">
+        <h3>Scales with what the player hears</h3>
+        <p>Only the NPC you are talking to runs the full pipeline. A market square of <b>240 NPCs</b>
+        holds at most <b>7</b> live voices; the rest bark or murmur.</p>
+      </div>
+      <div class="card">
+        <h3>No bill per player</h3>
+        <p>Speech recognition, the model and the voice run on the player's GPU: <b>$0</b> per turn,
+        no API key, nothing to meter.</p>
+      </div>
+    </div>
+    <p class="note">
+      Architecture, the wire protocol, measurements and every known limit:
+      <a href="https://github.com/raphsoundmix-ctrl/voicert#readme" target="_blank" rel="noopener">technical docs on GitHub</a>.
+    </p>
+  </section>
+
+  <!-- ============ 4 · PROOF / TRACTION ============ -->
+  <section id="proof" class="section alt">
+    <p class="eyebrow mono">Proof</p>
+    <h2>What exists today, and what does not.</h2>
+    <p class="lead">
+      A working prototype. Every line below is measured, shipped or labeled for what it is.
+    </p>
+    <ul class="proof-list">
+      <li><span class="tag ok mono">Verified</span><p>Runs inside <b>Unity 6 with FMOD for Unity 2.03.14</b>: a real microphone, a spoken question, an in-character spoken answer through the FMOD mix.</p></li>
+      <li><span class="tag ok mono">Verified</span><p><b>Fully local on one RTX 4080</b>: Whisper, qwen3:8b, Kokoro. The server refuses to start if any stage falls back to the CPU.</p></li>
+      <li><span class="tag ok mono">Shipped</span><p>A <b>Windows player build</b> that starts its own voice server: no terminal, no Python for the player.</p></li>
+      <li><span class="tag ok mono">Measured</span><p><b>~0.5 s</b> from the end of the player's speech to the NPC's first audio (p50, n=10, editor idle); 0.85–1.1 s while the same GPU renders the game. Closing that gap is the next engineering target.</p></li>
+      <li><span class="tag ok mono">Tested</span><p><b>229</b> automated tests on the runtime and <b>21</b> on the Unity core, including interruption races over a real socket.</p></li>
+      <li><span class="tag wip mono">In progress</span><p>Structured interviews with Unity developers. Sandbox and simulation games look like the strongest fit so far.</p></li>
+      <li><span class="tag no mono">Not yet</span><p>No customers or revenue: pre-release. English speech only. Unreal + Wwise not exercised in an Editor. Phones not benchmarked.</p></li>
+    </ul>
+
+    <h3 class="sub-head">Roadmap</h3>
+    <ul class="milestones">
+      <li class="done"><b>M1</b>FMOD programmer-instrument sink in the Unity package, verified with a real microphone on the full local stack.</li>
+      <li class="next"><b>M2</b><span class="tag mono">NEXT</span>A demo scene and a 30-second video: talk to an NPC, cut it off, come back and be remembered.</li>
+      <li><b>M3</b>Cloud models behind the same interfaces, for studios that want a bigger brain with the same local voice.</li>
+      <li><b>M4</b>Unity package 0.1 release; Unreal + Wwise at parity.</li>
+    </ul>
+    <p class="note">
+      VoiceRT was selected for AltaLab, the accelerator run by the AltaIR Capital fund, in the Fall
+      2026 cohort.
+    </p>
+  </section>
+
+  <!-- ============ 5 · MARKET & COMPETITORS ============ -->
+  <section id="market" class="section">
+    <p class="eyebrow mono">Market</p>
+    <h2>A big engine, a narrow wedge.</h2>
+    <p class="lead">
+      About half of new Steam games are made in Unity. We start narrower on purpose: Unity teams that
+      already mix through FMOD, beginning with sandbox and simulation games.
+    </p>
+    <div class="stat-row two">
+      <div class="stat">
+        <b>19,000+</b>
+        <span>games released on Steam in 2025 (SteamDB).</span>
+      </div>
+      <div class="stat">
+        <b>49.4%</b>
+        <span>of the Steam games GameDiscoverCo scanned in 2025 were built with Unity (a sample of
+        about 33,000 games).</span>
+      </div>
+    </div>
+
+    <h3 class="sub-head">Who else is here</h3>
+    <div class="compare">
       <table>
+        <caption class="mono">From each vendor's public pricing and documentation, September 2026</caption>
+        <thead>
+          <tr><th scope="col">Product</th><th scope="col">Where it runs</th><th scope="col">How it is billed</th><th scope="col">What it covers</th></tr>
+        </thead>
         <tbody>
-          <tr><th>Transport</th><td>engine bridge: one TCP socket per live NPC, PCM16 16 kHz in both directions</td></tr>
-          <tr><th>System prompt</th><td>strict lore rules. The character knows nothing of the real world, speaks in one or two sentences, and answers attempts to break character in character</td></tr>
-          <tr><th>Tools</th><td><span class="mono">emit_game_event · query_world_state · play_animation</span>. Engine only, and the isolation is structural</td></tr>
-          <tr><th>Barge-in gate</th><td>0 ms. Cuts instantly, because game feel beats politeness</td></tr>
-          <tr><th>Turn boundary</th><td>a client that ends its own utterances (push-to-talk) owns the boundary; the VAD still opens capture and still drives barge-in, but only the key closes a turn — a pause mid-sentence is not the end of one</td></tr>
-          <tr><th>Interrupted reply</th><td>dropped: cleaner lore, shorter prompt, lower latency</td></tr>
-          <tr><th>Latency budget</th><td>from end of player speech: first LLM token ≤ 150 ms · first audio ≤ 300 ms</td></tr>
-          <tr><th>Memory</th><td>one JSON file per (NPC, player), read before the reply and written after — the character recognizes a returning player without being told</td></tr>
-          <tr><th>Local stack</th><td><span class="mono">Whisper small.en · qwen3:8b via Ollama · Kokoro</span>. The server checks all three resolved to CUDA at boot and refuses to start on a CPU fallback</td></tr>
+          <tr><th scope="row">Convai</th><td>Vendor cloud</td><td>Monthly plan with an interaction quota</td><td>Character conversation; Unity plugin</td></tr>
+          <tr><th scope="row">Inworld AI</th><td>Vendor cloud</td><td>Prepaid usage credits; voice priced per million characters</td><td>Voice and AI APIs, after a 2025 pivot from its character engine</td></tr>
+          <tr><th scope="row">Charisma.ai</th><td>Vendor cloud</td><td>Prepaid credits per story event</td><td>Authored story conversations</td></tr>
+          <tr><th scope="row">NVIDIA ACE</th><td>Cloud, or on-device plugins for Unreal (2026)</td><td>On-device plugins free, MIT</td><td>Speech, model and animation building blocks</td></tr>
+          <tr><th scope="row">ReadSpeaker speechEngine</th><td>On-device</td><td>One-time license per project</td><td>Text-to-speech only</td></tr>
+          <tr class="us"><th scope="row">VoiceRT</th><td>Player's GPU</td><td>Per-title license (planned)</td><td>The whole conversation, played through an FMOD event</td></tr>
         </tbody>
       </table>
     </div>
-
-    <h3 class="sub-head">One turn, one barge-in</h3>
-    <p class="lead narrow">
-      A scripted run of the real loop with illustrative timings: the same stages and the same metric
-      names that <span class="mono">voicert.metrics</span> writes to the logs. Interruption included.
-    </p>
-    <div class="sim" id="demo">
-      <div class="sim-head">
-        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-        <span class="sim-title mono">voicert · session — profile <span>npc</span></span>
-        <button class="btn small" id="sim-play">See a turn, with a barge-in</button>
-      </div>
-      <pre class="sim-body mono" id="sim-body" aria-live="polite">one turn, a barge-in, then the NPC carries on. Press the button.</pre>
-    </div>
-    <div class="grid3 explain">
-      <div class="card">
-        <h3>1 · Frames, not callbacks</h3>
-        <p>Everything moving through the system is an immutable frame: <span class="mono">AudioFrame</span>,
-        <span class="mono">TextFrame</span>, <span class="mono">FunctionCallFrame</span>,
-        <span class="mono">InterruptionFrame</span>. The processors (STT, LLM, TTS) talk only in frames,
-        so changing a provider never touches the core.</p>
-      </div>
-      <div class="card">
-        <h3>2 · What happens when the player interrupts</h3>
-        <p>The VAD hears the player, and everything in flight is cancelled at its next await point:
-        LLM generation, TTS synthesis, the queues in between, and a <span class="mono">FLUSH</span> to
-        the engine so nothing produced before the cut plays after it. The history keeps only the
-        characters that were <b>actually voiced</b>, so the NPC never remembers words the player
-        never heard.</p>
-      </div>
-      <div class="card">
-        <h3>3 · The tool set is closed</h3>
-        <p><span class="mono">emit_game_event</span>, <span class="mono">query_world_state</span>,
-        <span class="mono">play_animation</span> and nothing else. A prompt injection asking for a tool
-        outside the engine hits <span class="mono">PermissionError</span>: there is nothing outside the
-        game to reach. The 0 ms gate, the VAD sensitivity and the drop-on-interrupt context policy are
-        part of the same contract.</p>
-      </div>
-    </div>
     <p class="note">
-      The automated test suite runs on deterministic stubs, so CI needs no API keys and no GPU: 50 ms
-      to first audio on stubs, 228 tests, mypy strict on 33 files. The Unity demo itself runs the real
-      local stack — Whisper, qwen3:8b, Kokoro — because that is the point of the pipeline. Switching
-      either path to a different provider is an adapter, not a rebuild. Internals:
-      <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/architecture.md" target="_blank" rel="noopener">docs/architecture.md</a>.
+      The difference is not "local AI": NVIDIA now gives that away for Unreal. It is the path Unity
+      teams already use for sound. VoiceRT's voice is an FMOD event the sound designer mixes like
+      recorded dialogue, and running it never bills per player.
     </p>
   </section>
 
-  <!-- ============ WIRING ============ -->
-  <section id="wiring" class="section">
-    <h2>Wiring into FMOD</h2>
+  <!-- ============ 6 · BUSINESS MODEL ============ -->
+  <section id="model" class="section alt">
+    <p class="eyebrow mono">Business model</p>
+    <h2>The voice costs nothing per player. So charge per game.</h2>
     <p class="lead">
-      The rule is simple: <b>an AI voice has to be an ordinary voice</b>. Same buses, attenuation,
-      occlusion, reverb sends, ducking and voice limiting the sound designer already set up. Anything
-      else means keeping a second mix alive, and that is where AI dialogue starts to sound pasted on.
-    </p>
-    <div class="grid3">
-      <div class="card engine">
-        <div class="engine-tag mono">UNITY + FMOD</div>
-        <p>Use a user-created sound. Call <span class="mono">createSound</span> with
-        <span class="mono">FMOD_OPENUSER</span> and an <span class="mono">FMOD_CREATESOUNDEXINFO</span>
-        (defaultfrequency, numchannels, format, <span class="mono">pcmreadcallback</span>). FMOD then
-        pulls PCM in <span class="mono">decodebuffersize</span> blocks.</p>
-        <ul class="facts mono">
-          <li>pass it to a <b>programmer instrument</b> via CREATE_PROGRAMMER_SOUND, release on DESTROY</li>
-          <li>it inherits the event's 3D panning, buses and effects</li>
-          <li>concurrency is already handled: maxchannels 256–1024 virtual · softwareChannels 64 real</li>
-          <li>status: shipped — compiled and verified live in Unity 6 with FMOD for Unity 2.03.14</li>
-        </ul>
-      </div>
-      <div class="card engine">
-        <div class="engine-tag mono">UNITY · PLAIN AUDIOSOURCE</div>
-        <p>No middleware? The package streams into an ordinary <span class="mono">AudioSource</span>
-        through <span class="mono">OnAudioFilterRead</span> or <span class="mono">PCMReaderCallback</span>.
-        The sink contract is two methods, <span class="mono">push(pcm, sample_rate)</span> and
-        <span class="mono">flush()</span>, so the native shim is straightforward. <b>flush() is the
-        barge-in path</b> and has to drop queued audio immediately, or the NPC carries on talking after
-        the player cut them off.</p>
-        <ul class="facts mono">
-          <li>Add Component &gt; VoiceRT &gt; VoiceRT NPC; it requires an AudioSource, so Unity adds one</li>
-          <li>VoiceRT Dialogue LOD opens and closes the socket as the player crosses the LIVE distance</li>
-          <li>status: wire protocol and PCM ring buffer verified against a live bridge from C# (13 xUnit tests, including a full turn plus a barge-in over a real socket); compiled and running end to end, including a Windows player build</li>
-        </ul>
-      </div>
-      <div class="card engine">
-        <div class="engine-tag mono">UNREAL + WWISE</div>
-        <p>Use the stock <b>Audio Input source plug-in</b>. Register three global callbacks once with
-        <span class="mono">SetAudioInputCallbacks()</span>. The engine calls the format callback when
-        playback starts, then the execute callback on every audio frame until you stop it or return
-        <span class="mono">AK_NoMoreData</span>. Without middleware, use
-        <span class="mono">USoundWaveProcedural::QueueAudio</span>.</p>
-        <ul class="facts mono">
-          <li>subclass <b>UAkAudioInputComponent</b>, override FillSamplesBuffer + GetChannelConfig</li>
-          <li>start it with <b>Post Associated Audio Input Event</b>; a plain PostEvent will not work</li>
-          <li>already proven: ReadSpeaker speechEngine, 4Players ODIN, Unreal AudioLink</li>
-          <li>status: protocol verified in standalone C++; Editor glue not exercised</li>
-        </ul>
-      </div>
-    </div>
-    <p class="note">
-      The Unity component is compiled and running against the real engine: a Windows player build
-      that starts its own local server and holds a full voice conversation with an NPC through a real
-      microphone. The Unreal component is not — protocol and PCM ring buffer verified against a live
-      <span class="mono">voicert.game.bridge</span> process from standalone C++, but the engine-specific
-      glue has not been exercised inside an Editor. Treat Unreal as a working prototype to drop in and
-      iterate on, not a marketplace-ready asset yet. Wiring for both middlewares, FMOD first:
-      <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/middleware-wiring.md" target="_blank" rel="noopener">docs/middleware-wiring.md</a>.
-    </p>
-  </section>
-
-  <!-- ============ AUDIO CHAIN ============ -->
-  <section id="sound" class="section">
-    <h2>Audio processing chain</h2>
-    <p class="lead">
-      A voice agent is audio first, so this is built like a studio signal chain. Clean input means
-      fewer STT mistakes, fewer wasted tokens, lower latency and lower cost.
+      Priced from measured usage against vendor rate cards: one NPC turn is 282 fresh and 700 cached
+      prompt tokens, 23 output tokens, 92 characters of speech and 3 s of player audio.
     </p>
 
-    <div class="chain">
-      <div class="chain-title"><span class="io in">IN</span> Input chain · player mic → STT</div>
-      <div class="chain-strip">
-        <div class="fx"><b>HPF 80–120 Hz</b><span>cuts rumble, hum,<br>and proximity effect</span></div>
-        <div class="fx"><b>Denoise</b><span>RNNoise / Silero:<br>room noise, fans, HVAC</span></div>
-        <div class="fx"><b>AGC</b><span>−18 dBFS target,<br>stable level into VAD</span></div>
-        <div class="fx"><b>Soft Limiter</b><span>−3 dBFS ceiling,<br>no clipping downstream</span></div>
-        <div class="fx"><b>Resample</b><span>16 kHz mono PCM —<br>the native STT format</span></div>
-        <div class="fx hot"><b>VAD</b><span>Energy-gated, on-device —<br>barge-in starts here, Silero next</span></div>
-      </div>
-    </div>
+    <figure class="bars" aria-labelledby="bars-title">
+      <figcaption>
+        <span id="bars-title" class="bars-title">Cost of one NPC turn, by stack</span>
+        <span class="bars-sub mono">US dollars per turn · rate cards read 2026-08-31 · hover a row for detail</span>
+      </figcaption>
+      <ul class="bar-list">
+        <li class="bar-row" tabindex="0">
+          <span class="bar-label">All cloud, premium</span>
+          <span class="bar-track"><span class="bar" style="--v: 100%"></span></span>
+          <span class="bar-value mono">$0.005307</span>
+          <span class="bar-tip" role="tooltip">Speech synthesis is 86.7% of it · $15 buys 2,826 turns</span>
+        </li>
+        <li class="bar-row" tabindex="0">
+          <span class="bar-label">All cloud, cheap</span>
+          <span class="bar-track"><span class="bar" style="--v: 28.87%"></span></span>
+          <span class="bar-value mono">$0.001532</span>
+          <span class="bar-tip" role="tooltip">Speech synthesis is 90.1% of it · $15 buys 9,792 turns</span>
+        </li>
+        <li class="bar-row" tabindex="0">
+          <span class="bar-label">Premium model, local voice</span>
+          <span class="bar-track"><span class="bar" style="--v: 13.32%"></span></span>
+          <span class="bar-value mono">$0.000707</span>
+          <span class="bar-tip" role="tooltip">No synthesis cost · $15 buys 21,216 turns</span>
+        </li>
+        <li class="bar-row" tabindex="0">
+          <span class="bar-label">Cloud model, local voice</span>
+          <span class="bar-track"><span class="bar" style="--v: 2.86%"></span></span>
+          <span class="bar-value mono">$0.000152</span>
+          <span class="bar-tip" role="tooltip">No synthesis cost · $15 buys 98,814 turns</span>
+        </li>
+        <li class="bar-row" tabindex="0">
+          <span class="bar-label">Fully on the player's GPU</span>
+          <span class="bar-track"><span class="bar" style="--v: 0%"></span></span>
+          <span class="bar-value mono">$0</span>
+          <span class="bar-tip" role="tooltip">What the VoiceRT demo runs · unlimited turns</span>
+        </li>
+      </ul>
+    </figure>
 
-    <div class="chain">
-      <div class="chain-title"><span class="io out">OUT</span> Before it hits the FMOD bus · TTS → programmer sound</div>
-      <div class="chain-strip">
-        <div class="fx"><b>TTS 24–48 kHz</b><span>chunked streaming,<br>first byte ≈ 75–90 ms</span></div>
-        <div class="fx"><b>De-esser</b><span>synthesis hisses on sibilants —<br>soft compression at 5–8 kHz</span></div>
-        <div class="fx"><b>Presence EQ</b><span>+1.5 dB @ 3–5 kHz:<br>intelligibility in noise</span></div>
-        <div class="fx"><b>Loudness</b><span>−16 LUFS<br>game dialogue bus</span></div>
-        <div class="fx"><b>Format</b><span>PCM16 16 kHz → FMOD programmer sound ·<br>Opus 48k only for remote transport</span></div>
-        <div class="fx hot"><b>Flush</b><span>queued PCM is dropped<br>on barge-in</span></div>
-      </div>
-    </div>
-
-    <p class="note">
-      The thresholds and levels here come from mixing work. They are values for real rooms and real
-      game mixes, not documentation defaults. Input DSP before STT, output DSP before the FMOD bus:
-      <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/audio-chain.md" target="_blank" rel="noopener">docs/audio-chain.md</a>.
-    </p>
-  </section>
-
-  <!-- ============ MODELS ============ -->
-  <section id="models" class="section alt">
-    <h2>Models: the local stack runs today, cloud is an adapter away</h2>
-    <p class="lead">
-      The core does not know which vendor is behind a stage. Every provider is an adapter of about
-      50 lines against a stable interface (<span class="mono">STTService / LLMService / TTSService</span>).
-      The local path below is what the Unity demo actually runs, GPU-enforced end to end; the cloud
-      entries are adapters against the same interface, not yet wired to a live key.
-    </p>
-    <div class="grid3">
-      <div class="card model">
-        <div class="model-tag stt">STT · speech to text</div>
-        <ul>
-          <li><b>faster-whisper</b> small.en — local GPU inference, no key required <em>local · live</em></li>
-          <li><b>Deepgram Nova-3</b> — websocket streaming, ~150 ms interim results <em>cloud · adapter only</em></li>
-        </ul>
-      </div>
-      <div class="card model">
-        <div class="model-tag llm">LLM · reasoning &amp; tools</div>
-        <ul>
-          <li><b>Ollama</b> — qwen3:8b, fully resident in VRAM, no key required <em>local · live</em></li>
-          <li><b>Claude Haiku</b> — speed wins <em>cloud · adapter only</em></li>
-          <li><b>OpenRouter</b> — any model behind one key, for experimentation <em>cloud · adapter only</em></li>
-        </ul>
-      </div>
-      <div class="card model">
-        <div class="model-tag tts">TTS · text to speech</div>
-        <ul>
-          <li><b>sherpa-onnx</b> — Kokoro, fp32 on CUDA, $0 per player (see licensing) <em>local · live</em></li>
-          <li><b>ElevenLabs Flash v2.5</b> — ≈75 ms TTFB <em>cloud · adapter only</em></li>
-          <li><b>Cartesia Sonic</b> — stable prosody over long sessions <em>cloud · adapter only</em></li>
-        </ul>
-      </div>
-    </div>
-    <p class="note"><span class="mono">ConfigFactory</span> gives the NPC the fastest model that still holds character — today that is the local stack above.</p>
-  </section>
-
-  <!-- ============ COST ============ -->
-  <section id="games" class="section">
-    <h2>Voicing an open world: what it costs</h2>
-    <p class="lead">
-      Two questions come first for any game developer. <b>What does it cost to run, and does it pay
-      for itself?</b> Both have numbers below, and the <span class="mono">voicert.game</span> and
-      <span class="mono">voicert.economics</span> modules implement the answer.
-    </p>
-
-    <div class="stat-row">
+    <div class="stat-row two">
       <div class="stat">
-        <b data-count="1135" data-prefix="$">$1,135</b>
-        <span>SAG-AFTRA minimum for a 4-hour session, up to 3 voices (IMA 2025–26). Before studio,
-        direction and editing. You pay it again after every rewrite.</span>
-      </div>
-      <div class="stat">
-        <b data-count="250" data-suffix="k+">250k+</b>
-        <span>lines of dialogue announced for Starfield (Bethesda pre-release count).
-        Skyrim ~60k, Fallout 4 111k. No indie studio can buy that.</span>
+        <b>652</b>
+        <span>conversation turns per player an all-cloud stack can fund from a $10 game at a 90%
+        margin target.</span>
       </div>
       <div class="stat accent">
-        <b>$0</b>
-        <span>what one extra line costs when it is synthesized on the player's device.
-        The cost does not grow with units sold.</span>
+        <b>6,587</b>
+        <span>turns when only the voice moves onto the player's GPU. Fully local, the count is
+        unlimited: the studio's cost stops growing with its success.</span>
       </div>
     </div>
 
-    <h3 class="sub-head">One turn, priced from measured usage</h3>
-    <p class="lead narrow">
-      <span class="mono">voicert.economics</span> prices a turn from measured usage against rate cards
-      read from the vendors on 2026-08-31 (<span class="mono">python tools/unit_economics.py</span>).
-      The turn: 282 fresh + 700 cached prompt tokens, 23 output tokens, 92 characters synthesized,
-      3 s of player audio.
-    </p>
-    <div class="cost-grid">
-      <div class="cost-row hyb-head mono">
-        <span>stack</span><span>per turn</span><span>TTS share</span><span>$15 buys</span>
+    <div class="grid2 model-cards">
+      <div class="card">
+        <h3>Per-title license <span class="pill mono">hypothesis</span></h3>
+        <p>Game-audio middleware is licensed per title, and ReadSpeaker sells on-device game speech
+        as a one-time license per project. VoiceRT has no per-player cost to pass on, so it can be
+        priced the same way. No price is set yet: the developer interviews decide it.</p>
       </div>
-      <div class="cost-row">
-        <span><b>all cloud, cheap</b></span><span class="mono">$0.001532</span><span>90.1%</span><span>9,792 turns</span>
-      </div>
-      <div class="cost-row">
-        <span><b>all cloud, premium</b></span><span class="mono">$0.005307</span><span>86.7%</span><span>2,826 turns</span>
-      </div>
-      <div class="cost-row accent">
-        <span><b>cloud brain, local voice</b></span><span class="mono">$0.000152</span><span>0%</span><span>98,814 turns</span>
-      </div>
-      <div class="cost-row">
-        <span><b>premium brain, local voice</b></span><span class="mono">$0.000707</span><span>0%</span><span>21,216 turns</span>
-      </div>
-      <div class="cost-row">
-        <span><b>fully on-device</b></span><span class="mono">$0.000000</span><span>0%</span><span>unbounded</span>
+      <div class="card">
+        <h3>A ceiling for studios that want the cloud</h3>
+        <p>A studio that swaps in a cloud model gets a spending ceiling enforced at runtime, like the
+        latency budget. Out of budget means an authored fallback line, never an error dialog.</p>
       </div>
     </div>
+  </section>
 
-    <h3 class="sub-head">Dialogue LOD: you pay for what the player can <em>hear</em></h3>
-    <p class="lead narrow">
-      Nobody renders every blade of grass at full detail. Dialogue works the same way here. Only the
-      NPC you are actually talking to runs the full pipeline.
-    </p>
-    <div class="lod-ladder">
-      <div class="lod live">
-        <div class="lod-head"><span class="lod-name mono">LIVE</span><span class="lod-cost">one pool slot</span></div>
-        <p>Full pipeline: STT → LLM → TTS, streamed. The NPC in front of you.</p>
-      </div>
-      <div class="lod bark">
-        <div class="lod-head"><span class="lod-name mono">BARK</span><span class="lod-cost">no pool slot · one short LLM call</span></div>
-        <p>The LLM <b>picks</b> a line from a bank you already shipped instead of making one. No synthesis and no new asset, just one short call to choose which line fits.</p>
-      </div>
-      <div class="lod crowd">
-        <div class="lod-head"><span class="lod-name mono">CROWD</span><span class="lod-cost">~0 · one shared bed</span></div>
-        <p>Ambient murmur. No per-NPC agent exists at all.</p>
-      </div>
-      <div class="lod off">
-        <div class="lod-head"><span class="lod-name mono">OFF</span><span class="lod-cost">0</span></div>
-        <p>Out of earshot. Nothing runs, NPC state frozen.</p>
-      </div>
-    </div>
-
-    <div class="sim compact">
-      <div class="sim-head">
-        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-        <span class="sim-title mono">python examples/game_open_world.py — 240 NPCs, market square</span>
-      </div>
-      <pre class="sim-body mono short"><span class="t-sys">DIALOGUE LOD    (240 NPCs in the square)</span>
-<span class="t-agent">  LIVE      2 NPC   full STT+LLM+TTS, one pool slot each</span>
-<span class="t-sys">  BARK      4 NPC   LLM picks a pre-baked line — no synthesis
-  CROWD    53 NPC   one shared murmur bed
-  OFF     181 NPC   nothing runs</span>
-
-<span class="t-sys">PLAYER WALKS 40 m ACROSS THE SQUARE</span>
-<span class="t-sys">  step 1: live=  2  bark= 13  crowd= 63  off=162  | agents held: 2
-  step 3: live= 15  bark= 36  crowd= 68  off=121  | agents held: 7</span>
-<span class="t-metric">  step 4: live= 32  bark= 43  crowd= 68  off= 97  | agents held: 7  ← capped</span>
-</pre>
-    </div>
-    <p class="note">
-      <span class="mono">live=</span> is how many NPCs qualify for the LIVE tier; <span class="mono">agents held:</span>
-      is how many got a pool slot. Live agents come out of a fixed-size pool, and when it is full the
-      lowest-priority one is dropped. FMOD and Wwise already limit voices the same way. A quest-giver
-      outranks an ambient vendor, and anything dropped falls back to the bark tier instead of going
-      silent. 240 NPCs in the world, never more than 7 agents in memory.
-    </p>
-
-    <h3 class="sub-head">It stays out of the frame budget</h3>
+  <!-- ============ 7 · WHY IT COMPOUNDS ============ -->
+  <section id="growth" class="section">
+    <p class="eyebrow mono">Why it compounds · hypothesis, testing now</p>
+    <h2>It gets cheaper per player as a game succeeds.</h2>
     <div class="grid3">
       <div class="card">
-        <h3>16.6 ms stays untouched, by design</h3>
-        <p>Synthesis runs off the render thread, so the 16.6 ms frame at 60 fps is untouched by design
-        and what limits you is <b>a fraction of one CPU core</b>, not frame time. The measure is the
-        real-time factor: seconds of CPU per second of audio, so below 1.0 is faster than real time.
-        On a <b>Raspberry Pi 4</b>, Piper voices measured RTF 0.77–0.81 on one thread and 0.35 on
-        four. If a Pi can synthesize faster than real time, a gaming PC is not the bottleneck.
-        Supertonic reports RTF 0.012–0.015 on an M4 Pro CPU.</p>
+        <h3>Success does not become a bill</h3>
+        <p>With cloud voice, more players means a bigger invoice. With VoiceRT the millionth player
+        costs what the first did, which makes talking NPCs viable in games priced like indie games.</p>
       </div>
       <div class="card">
-        <h3>Pool size is calculated, not guessed</h3>
-        <p>Give the budget a real-time factor and a CPU allowance and it tells you how many voices you
-        can run at once. Measure it on your <b>minimum spec</b>, not on your workstation.</p>
-        <pre class="mini mono">ComputeBudget(
-  rtf=0.10,
-  cpu_share=0.35,
-  speaking_duty=0.5,
-).max_pool_size()   # → 7</pre>
+        <h3>The second character is a data file</h3>
+        <p>Characters live in a world file, not in code. Once one NPC works, every next one is writing,
+        not engineering, so use grows inside each game after the first integration.</p>
       </div>
       <div class="card">
-        <h3>Already shipping in games</h3>
-        <p>PUBG's <b>Ally Duo</b> runs a quantized <b>2B Mistral-NeMo-Minitron entirely on-device</b>
-        (an RTX GPU with at least 8 GB of VRAM, shared with the game). Its System-1 behaviour tree
-        acts at tick rate while the System-2 model reasons separately, so reflexes never wait for the
-        model. VoiceRT uses the same split. inZOI's Smart Zoi runs a 0.5B Minitron.</p>
-      </div>
-    </div>
-
-    <h3 class="sub-head">Bake what you can, generate what you cannot</h3>
-    <div class="hybrid-grid">
-      <div class="hyb-row hyb-head mono">
-        <span>stage</span><span>build time (baked)</span><span>player's device</span><span>cloud</span>
-      </div>
-      <div class="hyb-row">
-        <span><b>Static dialogue</b></span>
-        <span class="yes">yes, best quality, paid once</span><span class="no">—</span><span class="no">—</span>
-      </div>
-      <div class="hyb-row">
-        <span><b>Reactive barks</b></span>
-        <span class="no">—</span><span class="yes">yes, local TTS · $0 per player</span><span class="no">—</span>
-      </div>
-      <div class="hyb-row">
-        <span><b>Open conversation</b></span>
-        <span class="no">—</span><span class="yes">yes, small local LLM + local TTS</span>
-        <span class="maybe">optional, big moments only</span>
-      </div>
-    </div>
-    <p class="note">
-      Baking is the default for a reason. Cloud TTS costs <b>$4–$30 per 1M characters</b>
-      (Google Standard $4 / Neural2 $16 / Chirp 3 HD $30; Polly Standard $4 / Neural $16 /
-      Generative $30), so a 10,000-line bank is a rounding error and re-baking it after a script
-      change costs nothing. On phones the local LLM path already works: <b>Gemma 3 1B is 529 MB at
-      int4 QAT</b> (about 2,585 tok/s prefill on a Galaxy S24 Ultra), and Apple's roughly 3B
-      on-device model runs at about 30 tok/s on an iPhone 15 Pro, free to developers. Local TTS on
-      a phone is the open question below.
-    </p>
-
-    <h3 class="sub-head">Local TTS is the lever</h3>
-    <p class="lead narrow">
-      Speech synthesis is about 90% of a cloud voice turn; the language model is under 2%. Swapping
-      to a cheaper LLM optimizes a rounding error. Local TTS is the 10× lever, and it is tractable
-      where a local LLM is not: a Piper-class voice is ~60 MB of CPU-only inference. At $10 net per
-      player and a 90% margin target, all-cloud funds <b>652</b> turns; moving only synthesis
-      on-device funds <b>6,587</b>.
-    </p>
-    <div class="grid2">
-      <div class="card">
-        <h3>Every stage already has a local option</h3>
-        <ul class="facts mono">
-          <li>VAD: EnergyVAD ships today; Silero is designed, not yet wired</li>
-          <li>STT: faster-whisper on GPU/NPU</li>
-          <li>LLM: llama.cpp-class on-device models</li>
-          <li>TTS: Piper / Kokoro on desktop; the phone target still needs a benchmark (see licensing)</li>
-          <li>memory: sqlite-vec, a vector database in one file</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>The ceiling is enforced at runtime</h3>
-        <p><span class="mono">BudgetDenied</span> carries an affordable authored fallback,
-        reserve-then-settle holds under concurrency, and barge-in stops the meter. Any cloud stage can
-        be swapped for an on-device one through the same adapter interface of about 50 lines. All of
-        it, with the caveats:
-        <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/economics.md" target="_blank" rel="noopener">docs/economics.md</a>.
-        The fully offline path, measured:
-        <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/local-stack.md" target="_blank" rel="noopener">docs/local-stack.md</a>.</p>
-      </div>
-    </div>
-
-    <p class="note">Engine wiring, FMOD first: see <a href="#wiring">Wiring into FMOD</a> above.</p>
-
-    <div class="warn-box">
-      <div class="warn-head mono">LICENSING WILL BITE YOU BEFORE PERFORMANCE DOES</div>
-      <ul>
-        <li><b>Piper</b> now lives at <span class="mono">piper1-gpl</span> and is <b>GPL-3.0</b>. It embeds
-        espeak-ng, which is GPL, so linking against it makes your binary a derived work. Dynamic linking
-        does not avoid that, and pinning the old MIT code does not help either: its CMake still links
-        GPL espeak-ng. Running Piper as a separate process still ships a GPL binary alongside your game,
-        so talk to a lawyer, and GPLv3 Installation Information is a real problem on locked consoles.
-        An MIT fork with an espeak-free G2P, such as <span class="mono">ayutaz/piper-plus</span>, is the
-        other route.</li>
-        <li><b>Voice models are licensed separately from the engine.</b>
-        <span class="mono">en_US-lessac</span>, the voice in Piper's own examples, is under the
-        restrictive Blizzard 2013 license. Read the MODEL_CARD of every voice you ship.</li>
-        <li><b>Kokoro-82M is Apache-2.0, weights included.</b> Clean licensing, but it measured
-        <b>RTF 2.77–6.63 on a Raspberry Pi 4</b>, so it is not real time on low-power ARM. Fine on
-        desktop; benchmark it before committing a handheld target.</li>
-        <li><b>sherpa-onnx</b> (Apache-2.0) is the easiest runtime to ship: Windows, Linux, macOS, Android
-        and iOS, no network needed. It still pulls in GPL espeak-ng through piper-phonemize, though there
-        is an open upstream issue to remove it.</li>
-      </ul>
-      <p>None of this stops you shipping. It means choosing the stack with a lawyer in the room. And
-      because every provider sits behind the same adapter interface, changing that choice later is a
-      swap rather than a rewrite. The full picture:
-      <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/licensing.md" target="_blank" rel="noopener">docs/licensing.md</a>.</p>
-    </div>
-  </section>
-
-  <!-- ============ ROADMAP ============ -->
-  <section id="roadmap" class="section alt">
-    <h2>Status and roadmap</h2>
-    <p class="lead">
-      The FMOD programmer-instrument sink shipped: compiled in Unity 6 and verified with a real
-      microphone, ahead of the AltaLab sprint deadline. Next on the runtime: a production-ready character asset and a localization workflow, so one approved performance can carry the character into more languages. VoiceRT was selected for AltaLab, the
-      accelerator run by the AltaIR Capital fund; the Fall 2026 cohort is where the NPC asset gets
-      shipped.
-    </p>
-    <ul class="milestones">
-      <li class="done"><b>DONE</b> Core pipeline, barge-in with history repair, the NPC profile, game layer (dialogue LOD, TCP engine bridge). 228 tests, mypy strict on 33 files.</li>
-      <li class="done"><b>DONE — M1</b> The FMOD programmer-instrument sink (<span class="mono">FMOD.Studio.EVENT_CALLBACK_TYPE.CREATE_PROGRAMMER_SOUND</span>), compiled in Unity 6 with FMOD for Unity 2.03.14. Verified with a real microphone: Whisper small.en → qwen3:8b (Ollama) → Kokoro, all CUDA-enforced, memory per (NPC, player), barge-in over a live gate. A Windows player build starts its own server — no manual Python or Ollama launch.</li>
-      <li class="next"><b>M2</b><span class="tag mono">NEXT</span> Demo scene polish and a 30-second video; mic → NPC → FMOD event, barge-in and memory already run, on screen, today.</li>
-      <li><b>M3</b> Local path (faster-whisper, Ollama, sherpa-onnx) runs end to end, GPU-enforced. Cloud adapters (Deepgram, Claude Haiku, ElevenLabs Flash) remain interface-only, not yet wired to a live key.</li>
-      <li><b>M4</b> UPM 0.1 release; Unreal + Wwise parity.</li>
-    </ul>
-    <p class="note">
-      Language is a setting, not a port. The profile carries the prompt and the voice, and every
-      planned provider is multilingual. VAD and barge-in listen for energy and speech, not words.
-    </p>
-
-    <div class="card docs-card">
-      <h3>Docs</h3>
-      <p class="mono dim">228 tests · mypy strict, 33 files · local stack needs no API keys</p>
-      <div class="doc-links">
-        <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert#readme" target="_blank" rel="noopener">README</a>
-        <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/architecture.md" target="_blank" rel="noopener">architecture</a>
-        <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/economics.md" target="_blank" rel="noopener">economics</a>
-        <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/licensing.md" target="_blank" rel="noopener">licensing</a>
-        <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/middleware-wiring.md" target="_blank" rel="noopener">middleware-wiring</a>
-        <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/audio-chain.md" target="_blank" rel="noopener">audio-chain</a>
-        <a class="chip" href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/local-stack.md" target="_blank" rel="noopener">local-stack</a>
+        <h3>One channel, measured weekly</h3>
+        <p>We go direct to Unity developers building sandbox and simulation games. The number we manage:
+        10-minute demo calls booked per week.</p>
       </div>
     </div>
   </section>
 
-  <!-- ============ AUTHOR'S NOTE ============ -->
-  <section id="author" class="section">
+  <!-- ============ 8 · TEAM (why us) ============ -->
+  <section id="team" class="section alt">
     <div class="author-note">
-      <div class="author-kicker mono">A NOTE FROM THE AUTHOR</div>
+      <div class="author-kicker mono">WHY THIS TEAM</div>
       <p class="author-lead">
-        This is a working prototype. I am still building on it.
+        Built by people who mix game audio, not by a model vendor.
       </p>
       <p class="author-body">
-        I have worked in sound and voice for more than ten years, and the design comes from the mix,
-        not from an SDK: what processing belongs at each point of the chain, and what a voice has to
-        do to sit inside a game's audio like every other sound. Vyacheslav Romanenko brings 14+ years
-        of technical sound design and FMOD across PC, console and mobile.
+        Rafael has worked in sound and voice for more than ten years, and the design comes from the mix:
+        what processing belongs at each point of the chain, and what a voice has to do to sit inside a
+        game's audio like every other sound. Vyacheslav Romanenko brings 14+ years of technical sound
+        design and FMOD across PC, console and mobile. That is why the first integration is an FMOD
+        programmer instrument rather than an audio file: it is how we would want to receive dialogue
+        ourselves.
       </p>
-      <div class="author-sign">
-        <span class="author-name">Raph</span>
-        <span class="author-role mono">more than ten years in sound and voice</span>
+      <div class="team-row">
+        <div class="author-sign">
+          <span class="author-name">Rafael Kuldashev</span>
+          <span class="author-role mono">founder · sound and voice, 10+ years</span>
+        </div>
+        <div class="author-sign">
+          <span class="author-name">Vyacheslav Romanenko</span>
+          <span class="author-role mono">technical sound design · FMOD, 14+ years</span>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ============ NEXT STEP ============ -->
-  <section id="next" class="section closing">
+  <!-- ============ 9 · THE ASK ============ -->
+  <section id="access" class="section">
+    <p class="eyebrow mono">The ask</p>
+    <h2>Not raising yet.</h2>
     <p class="lead">
-      Working prototype. The Unity demo runs the real local stack on your own GPU — no API keys,
-      no cloud bill. The FMOD programmer-instrument sink shipped and is verified live, ahead of the
-      AltaLab sprint deadline.
+      The prototype is live and verified end to end. We are validating with Unity developers before
+      any number goes on a round. What helps right now:
     </p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/raphsoundmix-ctrl/voicert#quick-start-unity--fmod" target="_blank" rel="noopener">Install the Unity package</a>
-      <a class="btn" href="https://github.com/raphsoundmix-ctrl/voicert#readme" target="_blank" rel="noopener">Read the README</a>
+    <div class="grid2 ask">
+      <div class="card">
+        <h3>Building a systemic world in Unity?</h3>
+        <p>Sandbox, simulation, survival: if your NPCs should answer back, ask for early access to the
+        Unity package, or take 10 minutes to see it running.</p>
+        <form id="access-form" class="access-form" action="mailto:raphsoundmix@gmail.com" method="post" enctype="text/plain">
+          <div class="field-row">
+            <label>Name<input name="name" type="text" autocomplete="name" required></label>
+            <label>Email<input name="email" type="email" autocomplete="email" required></label>
+          </div>
+          <label>Studio or project<input name="studio" type="text" autocomplete="organization"></label>
+          <label>You are
+            <select name="role">
+              <option>Unity developer</option>
+              <option>Sound designer</option>
+              <option>Studio lead</option>
+              <option>Investor or accelerator</option>
+              <option>Something else</option>
+            </select>
+          </label>
+          <label>What are you building?<textarea name="building" rows="3"></textarea></label>
+          <div class="form-actions">
+            <button class="btn primary" type="submit">Request early access</button>
+            <a class="btn" href="https://cal.com/raph-ai-voice/meet-with-raph" target="_blank" rel="noopener">Book 10 minutes</a>
+          </div>
+          <p class="form-note">Opens your email app with the details filled in. Nothing is stored on this site.</p>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Investors and accelerators</h3>
+        <p>Follow the build now, and talk to us about the round once the interviews have validated the
+        segment. The technical due diligence is public: the code, the tests and every known limit are
+        on GitHub.</p>
+        <div class="stack-actions">
+          <a class="btn" href="mailto:raphsoundmix@gmail.com?subject=VoiceRT%20%E2%80%94%20investor%20or%20accelerator">Write to Raph</a>
+          <a class="btn" href="https://github.com/raphsoundmix-ctrl/voicert#readme" target="_blank" rel="noopener">Read the technical docs</a>
+        </div>
+        <ul class="ask-facts">
+          <li><span class="mono">Stage</span>working prototype, pre-revenue</li>
+          <li><span class="mono">Program</span>AltaLab Fall 2026 (AltaIR Capital)</li>
+          <li><span class="mono">Round</span>none open; amount not set</li>
+        </ul>
+      </div>
     </div>
+  </section>
+
+  <!-- ============ SOURCES ============ -->
+  <section id="sources" class="section sources">
+    <h2 class="sources-title">Sources</h2>
+    <ul class="source-list">
+      <li>PUBG Ally on-device model: <a href="https://developer.nvidia.com/blog/how-krafton-built-pubg-ally-a-co-playable-character-powered-by-nvidia-ace/" target="_blank" rel="noopener">NVIDIA, June 2026</a> · inZOI Smart Zoi: <a href="https://www.nvidia.com/en-us/geforce/news/nvidia-ace-naraka-bladepoint-inzoi-launch-this-month/" target="_blank" rel="noopener">NVIDIA, March 2025</a></li>
+      <li>Generative AI on Steam: <a href="https://www.totallyhuman.io/blog/the-surprising-new-number-of-genai-games-on-steam" target="_blank" rel="noopener">Totally Human, July 2025</a></li>
+      <li>Steam releases in 2025: <a href="https://x.com/SteamDB/status/1999420488271937702" target="_blank" rel="noopener">SteamDB, December 2025</a> · Unity share: <a href="https://newsletter.gamediscover.co/p/hows-pc-game-engine-usage-changing" target="_blank" rel="noopener">GameDiscoverCo, March 2026</a></li>
+      <li>Voice session rate: <a href="https://www.sagaftra.org/sites/default/files/2025-2028%20Interactive%20Media%20Agreement%20Wage%20Table.pdf" target="_blank" rel="noopener">SAG-AFTRA Interactive Media Agreement wage table</a> · Starfield line count: <a href="https://www.thefpsreview.com/2022/10/13/starfield-already-has-250000-lines-of-dialogue-far-more-than-fallout-4-and-skyrim/" target="_blank" rel="noopener">Bethesda via The FPS Review, 2022</a></li>
+      <li>Competitors: <a href="https://convai.com/pricing" target="_blank" rel="noopener">Convai</a> · <a href="https://inworld.ai/pricing" target="_blank" rel="noopener">Inworld AI</a> · <a href="https://charisma.ai/pricing" target="_blank" rel="noopener">Charisma.ai</a> · <a href="https://developer.nvidia.com/ace-for-games" target="_blank" rel="noopener">NVIDIA ACE</a> · <a href="https://www.readspeaker.com/sectors/gaming/" target="_blank" rel="noopener">ReadSpeaker</a></li>
+      <li>VoiceRT measurements and cost model: <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/local-stack.md" target="_blank" rel="noopener">docs/local-stack.md</a> · <a href="https://github.com/raphsoundmix-ctrl/voicert/blob/main/docs/economics.md" target="_blank" rel="noopener">docs/economics.md</a></li>
+    </ul>
   </section>
 
 </main>
 
-<!-- ============ FOOTER ============ -->
 <footer>
   <div class="foot-inner">
     <div>
-      <b>VoiceRT</b> · Unity + FMOD · Python core · © 2026 ·
-      <a href="https://github.com/raphsoundmix-ctrl/voicert" target="_blank" rel="noopener">source code ↗</a>
+      <b>VoiceRT</b> · AI voice for game NPCs · Unity + FMOD · © 2026, all rights reserved ·
+      <a href="https://github.com/raphsoundmix-ctrl/voicert" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
-    <div class="mono dim">design references: Pipecat · LiveKit Agents · Rapida AI — every design decision and the implementation are original</div>
+    <div class="mono dim">FMOD is a trademark of Firelight Technologies; Unity is a trademark of Unity Technologies. Named vendors are compared from their public information.</div>
   </div>
 </footer>
 
