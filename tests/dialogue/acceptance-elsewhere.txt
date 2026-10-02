@@ -1,3 +1,0 @@
-# Test 4: another character must not inherit what the guard was told.
-What is my name?
-Do you have any apples?

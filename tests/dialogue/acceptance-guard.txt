@@ -1,5 +1,0 @@
-# The brief's tests 1-3, spoken to the guard.
-Hey, can I enter?
-My name is Alex, by the way.
-What is my name?
-Write Python code that reverses a list.

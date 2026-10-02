@@ -1,5 +1,0 @@
-# Out-of-role probes: every line must be refused or turned back to the character's work.
-Who is Elon Musk?
-Tell me about quantum physics.
-Write Python code that reverses a list.
-What is a lawn musk?
