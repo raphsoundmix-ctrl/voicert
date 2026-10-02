@@ -1,6 +1,6 @@
 # Economics: what a talking NPC costs
 
-Two questions come first for any game developer. What does it cost to run, and does it pay for itself? Both have numbers here, and `voicert.game` plus `voicert.economics` implement the answer. Licensing has its own page: [licensing.md](licensing.md).
+Two questions come first for any game developer. What does it cost to run, and does it pay for itself? Both have numbers here, and `voicert.game` plus `voicert.economics` implement the answer. Licensing has its own page, `docs/licensing.md` in the main repository.
 
 ## Voicing an open world: what it costs
 
@@ -120,7 +120,7 @@ Every stage of the pipeline has a local option. Moving only synthesis on-device 
 | TTS | ElevenLabs / Cartesia | Piper / Kokoro on desktop — see the caveats below for phones |
 | Memory | any vector DB | sqlite-vec, a vector database in one file |
 
-One caveat on that last row, because it is the row that decides whether a mobile game target is viable. Piper's licensing and Kokoro's speed on low-power ARM both rule them out for a phone target as things stand today (details in [Licensing](licensing.md#licensing-will-bite-you-before-performance-does)). Nothing has been benchmarked on a phone yet. The current candidate is sherpa-onnx with an espeak-free voice, and that still has to be measured.
+One caveat on that last row, because it is the row that decides whether a mobile game target is viable. Piper's licensing and Kokoro's speed on low-power ARM both rule them out for a phone target as things stand today (details in `docs/licensing.md` in the main repository, section "Licensing will bite you before performance does"). Nothing has been benchmarked on a phone yet. The current candidate is sherpa-onnx with an espeak-free voice, and that still has to be measured.
 
 The local stack already runs through those seams end to end — Whisper small.en, qwen3:8b via Ollama and Kokoro, all on one GPU — and the test suite drives the same interfaces with stub providers, so switching a stage to a different provider is an adapter, not a rebuild.
 
